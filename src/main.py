@@ -18,32 +18,49 @@ def print_message_trace(event):
     """
     for node_name, state_update in event.items():
         print(f"\n--- Output from Node: {node_name} ---")
-        messages = state_update.get("messages", [])
         
-        for msg in messages:
-            if isinstance(msg, AIMessage):
-                if msg.tool_calls:
-                    for tool_call in msg.tool_calls:
-                        print(f"Agent decided to use tool: {tool_call['name']}")
-                        print(f"   With arguments: {tool_call['args']}")
-                if msg.content:
-                    print(f"Agent reasoning / final answer:\n{msg.content}")
+        if state_update is None:
+            state_update = {}
             
-            elif isinstance(msg, ToolMessage):
-                print(f"Tool '{msg.name}' returned:")
-                # Truncate long results for readability
-                content = msg.content
-                if len(content) > 300:
-                    content = content[:300] + "... [truncated]"
-                print(f"   {content}")
+        if node_name == "planner":
+            print(f"Generated Plan:\n{state_update.get('plan', '')}")
+            
+        elif node_name == "executor":
+            messages = state_update.get("messages", [])
+            for msg in messages:
+                if isinstance(msg, AIMessage):
+                    if msg.tool_calls:
+                        for tool_call in msg.tool_calls:
+                            print(f"Executor decided to use tool: {tool_call['name']}")
+                            print(f"   With arguments: {tool_call['args']}")
+                    else:
+                        print(f"Executor draft answer:\n{msg.content}")
+                        
+        elif node_name == "critic":
+            messages = state_update.get("messages", [])
+            if messages and messages[-1].type == "human" and "Critic Feedback:" in str(messages[-1].content):
+                print(f"Critic requested revision:\n{messages[-1].content}")
+            else:
+                print(f"Critic APPROVED the answer.")
+                
+        elif node_name == "tools":
+            messages = state_update.get("messages", [])
+            for msg in messages:
+                if isinstance(msg, ToolMessage):
+                    print(f"Tool '{msg.name}' returned:")
+                    # Truncate long results for readability
+                    content = str(msg.content)
+                    if len(content) > 300:
+                        content = content[:300] + "... [truncated]"
+                    print(f"   {content}")
 
 def main():
-    # Load environment variables (GROQ_API_KEY, TAVILY_API_KEY)
+    # Load environment variables (GROQ_API_KEY, TAVILY_API_KEY, GEMINI_API_KEY)
     load_dotenv()
     
     # Ensure keys are loaded
-    if not os.getenv("GROQ_API_KEY") or not os.getenv("TAVILY_API_KEY"):
-        print("Error: Missing GROQ_API_KEY or TAVILY_API_KEY in .env file.")
+    if not os.getenv("GROQ_API_KEY") or not os.getenv("TAVILY_API_KEY") or not os.getenv("GEMINI_API_KEY"):
+        print("Error: Missing GROQ_API_KEY, TAVILY_API_KEY, or GEMINI_API_KEY in .env file.")
         print("Please check your .env configuration.")
         return
 

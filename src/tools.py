@@ -71,6 +71,18 @@ def execute_python(code: str) -> str:
     The code should use `print()` to output results.
     execute_python(code="text = '''retrieved text...'''\nprint(len(text))").
     """
+    # Block dangerous operations before execution
+    BLOCKED_KEYWORDS = [
+        "os.system", "subprocess", "shutil", "open(", "eval(", "exec(",
+        "__import__", "importlib", "pathlib", "socket", "requests",
+        "urllib", "http.client", "ftplib", "smtplib", "ctypes",
+        "multiprocessing", "threading", "signal",
+    ]
+    code_lower = code.lower()
+    for keyword in BLOCKED_KEYWORDS:
+        if keyword.lower() in code_lower:
+            return f"Execution blocked: '{keyword}' is not allowed in the sandbox for security reasons."
+
     # Create a safe execution environment (restricted globals/locals)
     safe_globals = {
         "__builtins__": {
@@ -79,7 +91,6 @@ def execute_python(code: str) -> str:
             "bool": bool, "sum": sum, "min": min, "max": max, "abs": abs,
             "round": round, "any": any, "all": all, "enumerate": enumerate,
             "zip": zip, "map": map, "filter": filter, "sorted": sorted,
-            "__import__": __import__
         },
         "math": __import__("math"),
         "json": __import__("json")
@@ -90,11 +101,15 @@ def execute_python(code: str) -> str:
     redirected_output = io.StringIO()
     sys.stdout = redirected_output
     
+    MAX_OUTPUT_LENGTH = 5000
+    
     try:
         exec(code, safe_globals)
         output = redirected_output.getvalue()
         if not output.strip():
             return "Code executed successfully, but no output was printed."
+        if len(output) > MAX_OUTPUT_LENGTH:
+            return output[:MAX_OUTPUT_LENGTH] + "\n\n... [output truncated for safety]"
         return output
     except NameError as e:
         if "query_knowledge_base" in str(e) or "tavily_search_results_json" in str(e):

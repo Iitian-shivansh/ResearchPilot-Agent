@@ -4,7 +4,8 @@ Tool definitions for the LangGraph agent.
 import sys
 import io
 import json
-from langchain_community.tools.tavily_search import TavilySearchResults
+import os
+from langchain_tavily import TavilySearch
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -17,7 +18,10 @@ def query_knowledge_base(query: str) -> str:
     """
     try:
         # Initialize connections
-        client = QdrantClient(url="http://localhost:6333")
+        client = QdrantClient(
+            url=os.getenv("QDRANT_URL"),
+            api_key=os.getenv("QDRANT_API_KEY"),
+)
         embeddings_model = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
         
         # Embed query
@@ -124,5 +128,5 @@ def get_tools():
     """
     Returns a list of tools available for the agent.
     """
-    search_tool = TavilySearchResults(max_results=3)
+    search_tool = TavilySearch(max_results=3)
     return [search_tool, query_knowledge_base, execute_python]

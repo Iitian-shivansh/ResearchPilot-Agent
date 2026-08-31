@@ -44,7 +44,7 @@ This will launch a web interface where you can enter questions and watch the age
 ## Known Limitations & Resilience
 
 - **Free-Tier Limits**: This project is optimized for Groq's 6000 Tokens-Per-Minute free tier. The Executor minimizes overhead by resolving the entire plan continuously rather than spawning fresh agents per task.
-- **LLM Formatting Hallucinations**: Because Groq models (like `llama-3.3-70b-versatile`) convert native XML tool tags into JSON on the backend, large text payloads occasionally cause the model to drop a bracket, resulting in a `400 BadRequestError`. 
+- **LLM Formatting Hallucinations**: Because Groq models (like `openai/gpt-oss-120b`) convert native XML tool tags into JSON on the backend, large text payloads occasionally cause the model to drop a bracket, resulting in a `400 BadRequestError`. 
   - **The Fix**: The application wraps the LLM calls in a resilient `try/except` block. When a 400 error occurs, it intercepts the crash, appends a simplified formatting note, and retries the generation. If it still fails, the Critic gracefully self-corrects!
 
 See `demo_traces/plan_execute_self_correction_example.txt` for a complete example of the agent hitting an error, catching it, and successfully self-correcting.

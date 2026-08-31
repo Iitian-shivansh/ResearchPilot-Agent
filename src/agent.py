@@ -22,7 +22,7 @@ class AgentState(TypedDict):
     revision_count: int
 
 def create_agent_graph():
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+    llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
     tools = get_tools()
     llm_with_tools = llm.bind_tools(tools)
     

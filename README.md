@@ -27,13 +27,12 @@ The agent runs as a structured graph with three main phases:
    GROQ_API_KEY=your_key
    TAVILY_API_KEY=your_key
    GEMINI_API_KEY=your_key
+   QDRANT_URL=your_qdrant_cloud_url
+   QDRANT_API_KEY=your_qdrant_api_key
    ```
 
-3. **Start Qdrant Knowledge Base**
-   Ensure your local Qdrant vector database is running on `localhost:6333`.
-   ```bash
-   docker start backend-qdrant-1
-   ```
+3. **Configure Qdrant Knowledge Base**
+   Ensure you have a Qdrant Cloud cluster running and the `QDRANT_URL` and `QDRANT_API_KEY` are properly set in your `.env` file so the agent can connect to it for vector retrieval.
 
 ## Running the Application
 

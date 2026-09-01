@@ -9,7 +9,10 @@ def test_qdrant():
     print("Testing Qdrant connection...")
     try:
         from qdrant_client import QdrantClient
-        client = QdrantClient(url="http://localhost:6333")
+        client = QdrantClient(
+            url=os.getenv("QDRANT_URL"),
+            api_key=os.getenv("QDRANT_API_KEY"),
+        )
         collections = client.get_collections()
         print(f"SUCCESS: Connected to Qdrant. Found collections: {[c.name for c in collections.collections]}")
     except Exception as e:

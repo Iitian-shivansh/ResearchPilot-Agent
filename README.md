@@ -1,5 +1,7 @@
 # ResearchPilot Agent
 
+🌟 **Live Demo:** [https://researchpilot-agent-ask-query.streamlit.app/](https://researchpilot-agent-ask-query.streamlit.app/)
+
 ResearchPilot is an advanced, self-correcting AI research agent built using **LangGraph**. It combines a Plan-and-Execute architecture with dynamic web searching, local knowledge base retrieval, and a Python sandbox for robust analytical reasoning.
 
 ## Architecture

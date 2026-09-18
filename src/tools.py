@@ -1,14 +1,16 @@
 """
 Tool definitions for the LangGraph agent.
 """
-import sys
-import io
 import json
+import logging
 import os
 from langchain_tavily import TavilySearch
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from src.sandbox import run_code_in_subprocess, SandboxConfig
+
+logger = logging.getLogger(__name__)
 
 @tool
 def query_knowledge_base(query: str) -> str:
@@ -75,54 +77,34 @@ def execute_python(code: str) -> str:
     The code should use `print()` to output results.
     execute_python(code="text = '''retrieved text...'''\nprint(len(text))").
     """
-    # Block dangerous operations before execution
-    BLOCKED_KEYWORDS = [
-        "os.system", "subprocess", "shutil", "open(", "eval(", "exec(",
-        "__import__", "importlib", "pathlib", "socket", "requests",
-        "urllib", "http.client", "ftplib", "smtplib", "ctypes",
-        "multiprocessing", "threading", "signal",
-    ]
-    code_lower = code.lower()
-    for keyword in BLOCKED_KEYWORDS:
-        if keyword.lower() in code_lower:
-            return f"Execution blocked: '{keyword}' is not allowed in the sandbox for security reasons."
+    # Execute in an isolated subprocess via the sandbox module.
+    # All validation (blocklist, code length), timeout enforcement,
+    # and output capture are handled by run_code_in_subprocess().
+    # See src/sandbox.py for configurable limits (SandboxConfig).
+    result = run_code_in_subprocess(code)
 
-    # Create a safe execution environment (restricted globals/locals)
-    safe_globals = {
-        "__builtins__": {
-            "print": print, "len": len, "range": range, "int": int, "float": float, 
-            "str": str, "list": list, "dict": dict, "set": set, "tuple": tuple,
-            "bool": bool, "sum": sum, "min": min, "max": max, "abs": abs,
-            "round": round, "any": any, "all": all, "enumerate": enumerate,
-            "zip": zip, "map": map, "filter": filter, "sorted": sorted,
-        },
-        "math": __import__("math"),
-        "json": __import__("json")
-    }
-    
-    # Capture standard output
-    old_stdout = sys.stdout
-    redirected_output = io.StringIO()
-    sys.stdout = redirected_output
-    
-    MAX_OUTPUT_LENGTH = 5000
-    
-    try:
-        exec(code, safe_globals)
-        output = redirected_output.getvalue()
-        if not output.strip():
+    # Log safe metadata only — never log the code itself or secrets
+    logger.info(
+        "execute_python: success=%s duration_ms=%.1f error_type=%s "
+        "code_length=%d output_length=%d",
+        result.success,
+        result.execution_time_ms,
+        result.error_type,
+        len(code),
+        len(result.stdout),
+    )
+
+    # Convert structured result back to string for LangGraph compatibility.
+    # The agent expects a plain string return — same interface as before.
+    if result.success:
+        if not result.stdout.strip():
             return "Code executed successfully, but no output was printed."
-        if len(output) > MAX_OUTPUT_LENGTH:
-            return output[:MAX_OUTPUT_LENGTH] + "\n\n... [output truncated for safety]"
-        return output
-    except NameError as e:
-        if "query_knowledge_base" in str(e) or "tavily_search_results_json" in str(e):
-            return "Execution error: NameError - tool functions cannot be called inside the sandbox. Pass retrieved text as a string literal instead."
-        return f"Execution error: {e}"
-    except Exception as e:
-        return f"Execution error: {e}"
-    finally:
-        sys.stdout = old_stdout
+        return result.stdout
+    else:
+        # Return the error in a format consistent with the old implementation
+        # so the Executor/Critic can interpret it the same way.
+        error_msg = result.stderr or f"Execution failed: {result.error_type}"
+        return f"Execution error: {error_msg}"
 
 def get_tools():
     """

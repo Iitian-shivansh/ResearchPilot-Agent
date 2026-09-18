@@ -7,6 +7,7 @@ This module defines the Plan-and-Execute agent:
 3. Critic: Reviews draft for completeness and citations.
 """
 
+import time
 from typing import Annotated, Literal, TypedDict
 import groq
 from langchain_groq import ChatGroq
@@ -16,13 +17,22 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from src.tools import get_tools
 
+# --- Agent-level constants ---
+# Maximum number of executor → tools → executor round-trips before forcing
+# the executor to produce a final answer. Prevents infinite looping when the
+# LLM keeps requesting tools instead of synthesizing an answer.
+MAX_TOOL_ROUNDS = 4
+
+# Seconds to wait before retrying after a Groq rate-limit (429) error.
+RATE_LIMIT_RETRY_DELAY = 5
+
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     plan: str
     revision_count: int
 
 def create_agent_graph():
-    llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+    llm = ChatGroq(model="qwen/qwen3.8-27b", temperature=0)
     tools = get_tools()
     llm_with_tools = llm.bind_tools(tools)
     
@@ -30,9 +40,28 @@ def create_agent_graph():
         messages = state["messages"]
         query = messages[0].content if messages else ""
         
-        sys_msg = SystemMessage(content="You are a planning assistant. Break the user's complex research question into 2 to 4 concrete sub-tasks. Output ONLY the numbered list of sub-tasks, nothing else. Keep it brief to save tokens.")
+        sys_msg = SystemMessage(
+            content=(
+                "You are a planning assistant. Break the user's research question "
+                "into concrete sub-tasks.\n"
+                "- For simple factual questions (e.g. 'What is X?', 'Who is Y?'), "
+                "output just 1 sub-task.\n"
+                "- For complex multi-part questions, output 2 to 4 sub-tasks.\n"
+                "Output ONLY the numbered list of sub-tasks, nothing else. "
+                "Keep it brief to save tokens."
+            )
+        )
         
-        response = llm.invoke([sys_msg, HumanMessage(content=query)])
+        try:
+            response = llm.invoke([sys_msg, HumanMessage(content=query)])
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "rate" in error_str.lower():
+                print(f"\n[Warning] Rate limit hit in planner, retrying in {RATE_LIMIT_RETRY_DELAY}s...")
+                time.sleep(RATE_LIMIT_RETRY_DELAY)
+                response = llm.invoke([sys_msg, HumanMessage(content=query)])
+            else:
+                raise
         return {"plan": response.content, "revision_count": 0}
         
     def executor_node(state: AgentState):
@@ -44,6 +73,7 @@ def create_agent_graph():
                 "You are an executor assistant. Follow this plan sequentially to solve the user's original query:\n"
                 f"{plan}\n\n"
                 "Only use tools when you do not know the answer with high confidence.\n"
+                "For simple factual questions you can answer directly without tools.\n"
                 "When using execute_python based on knowledge base text, pass the text directly as a string literal. "
                 "Never call tools from inside the Python code.\n"
                 "Once you have completed the plan, synthesize a final cohesive draft answer."
@@ -63,8 +93,19 @@ def create_agent_graph():
                 print(f"\n[Error] Tool call formatting failed after retry.")
                 return {"messages": [AIMessage(content="Tool call formatting failed after retry \u2014 try rephrasing your question or breaking it into smaller steps.")]}
         except Exception as e:
-            print(f"\n[Error] LLM call failed: {e}")
-            return {"messages": [AIMessage(content="An unexpected error occurred during the LLM call.")]}
+            error_str = str(e)
+            # Handle rate-limit (429) errors with a retry + backoff
+            if "429" in error_str or "rate" in error_str.lower():
+                print(f"\n[Warning] Rate limit hit, retrying in {RATE_LIMIT_RETRY_DELAY}s...")
+                time.sleep(RATE_LIMIT_RETRY_DELAY)
+                try:
+                    response = llm_with_tools.invoke(full_messages)
+                except Exception as e2:
+                    print(f"\n[Error] LLM call failed after rate-limit retry: {e2}")
+                    return {"messages": [AIMessage(content="Rate limit exceeded on the LLM API. Please wait a moment and try again.")]}
+            else:
+                print(f"\n[Error] LLM call failed: {e}")
+                return {"messages": [AIMessage(content=f"An unexpected error occurred during the LLM call: {type(e).__name__}")]}
             
         return {"messages": [response]}
         
@@ -73,7 +114,17 @@ def create_agent_graph():
         last_message = messages[-1]
         
         if last_message.tool_calls:
-            # Safeguard: Limit retries on tool errors to 2 max
+            # --- Hard cap on total tool-call rounds ---
+            # Count how many tool-call round-trips have occurred so far.
+            # Each round is: executor sends tool_calls → tools node returns results.
+            tool_round_count = sum(
+                1 for msg in messages if msg.type == "tool"
+            )
+            if tool_round_count >= MAX_TOOL_ROUNDS:
+                print(f"\n[Safeguard] Tool rounds exceeded limit ({MAX_TOOL_ROUNDS} max). Stopping loop.")
+                return END
+
+            # --- Consecutive error cap (original safeguard) ---
             error_count = 0
             for i in range(len(messages) - 2, -1, -1):
                 msg = messages[i]
@@ -103,17 +154,34 @@ def create_agent_graph():
         
         sys_msg = SystemMessage(
             content=(
-                "You are a strict reviewer. Review the Draft Answer against the Original Query and Plan.\n"
+                "You are a reviewer. Review the Draft Answer against the Original Query and Plan.\n"
                 "Tasks:\n"
-                "1. Check if all sub-tasks were addressed.\n"
-                "2. Verify claims are supported by specific citations (e.g., from tools). "
-                "If the draft answers the query successfully and is cited, output EXACTLY: 'APPROVED'.\n"
-                "If it misses info or lacks citations, provide a BRIEF, 1-sentence critique on what needs to be fixed. Do NOT output 'APPROVED'."
+                "1. Check if the query was answered correctly and completely.\n"
+                "2. For complex research questions, verify claims are supported by citations from tools.\n"
+                "3. For simple factual questions (e.g. 'What is X?'), well-known facts do NOT need tool citations.\n"
+                "If the draft answers the query correctly, output EXACTLY: 'APPROVED'.\n"
+                "Only reject if the answer is factually wrong, incomplete, or a complex question lacks sources. "
+                "If rejecting, provide a BRIEF 1-sentence critique. Do NOT output 'APPROVED'."
             )
         )
         
         prompt = f"Original Query: {original_query}\nPlan: {plan}\nDraft Answer: {draft}"
-        response = llm.invoke([sys_msg, HumanMessage(content=prompt)])
+        try:
+            response = llm.invoke([sys_msg, HumanMessage(content=prompt)])
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "rate" in error_str.lower():
+                print(f"\n[Warning] Rate limit hit in critic, retrying in {RATE_LIMIT_RETRY_DELAY}s...")
+                time.sleep(RATE_LIMIT_RETRY_DELAY)
+                try:
+                    response = llm.invoke([sys_msg, HumanMessage(content=prompt)])
+                except Exception:
+                    # If still failing, just approve to avoid an infinite error loop
+                    print("\n[Warning] Critic rate-limited after retry, auto-approving.")
+                    return {}
+            else:
+                print(f"\n[Warning] Critic failed: {e}, auto-approving to avoid crash.")
+                return {}
         
         review = response.content.strip()
         if "APPROVED" in review.upper() or state.get("revision_count", 0) >= 1:
@@ -152,3 +220,4 @@ def create_agent_graph():
     app = workflow.compile()
     
     return app
+

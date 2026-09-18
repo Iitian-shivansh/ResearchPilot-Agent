@@ -11,9 +11,11 @@ st.set_page_config(page_title="Research Agent", page_icon="🤖", layout="center
 st.title("Research Agent (Plan & Execute)")
 st.write("Ask complex questions. The agent will plan, execute tools, and self-correct.")
 
-query = st.text_input("Enter your research question:")
+with st.form("query_form"):
+    query = st.text_input("Enter your research question:")
+    submitted = st.form_submit_button("Run Agent")
 
-if st.button("Run Agent"):
+if submitted:
     if not query:
         st.warning("Please enter a question.")
     else:

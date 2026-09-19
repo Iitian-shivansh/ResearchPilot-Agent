@@ -8,15 +8,18 @@ It reads Python code from the specified file, executes it in a restricted
 namespace, captures stdout/stderr, and outputs a JSON result envelope.
 
 Security measures applied in this worker process:
-    - Environment variables containing secrets are cleared (best-effort)
-    - __builtins__ is restricted to a safe subset (moderate protection)
-    - No imports are pre-loaded beyond the minimum needed for the worker itself
+    - Environment variables containing secrets are cleared (defense-in-depth)
+    - __builtins__ is restricted to a safe subset
+    - Only whitelisted modules can be imported
+    - OS-level resource limits are applied where supported (Linux)
+    - No dangerous builtins (getattr, setattr, hasattr, type) are available
 
 Limitations (documented honestly):
-    - A determined attacker could bypass __builtins__ restrictions via
-      object introspection (e.g., ().__class__.__bases__[0].__subclasses__())
+    - A determined attacker could potentially bypass Python-level restrictions
+      via techniques not yet discovered
     - There is no OS-level seccomp/namespace/cgroup isolation
     - Network access is not blocked at the OS level
+    - Resource limits are only available on Linux/POSIX (not Windows)
 """
 
 import sys
@@ -27,17 +30,19 @@ import time
 
 
 # ---------------------------------------------------------------------------
-# 1. Sanitize environment — remove known secret/sensitive variables
+# 1. Sanitize environment — defense-in-depth secret removal
 # ---------------------------------------------------------------------------
-# This is best-effort: we clear common secret patterns. The parent process
-# also avoids passing its full environment, but we defensively clear here too.
+# The parent process uses an allowlist to construct a minimal environment.
+# This blocklist-based cleanup is defense-in-depth: it catches any secrets
+# that might slip through if the parent's allowlist is misconfigured.
 _SENSITIVE_ENV_PATTERNS = [
     "API_KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL",
     "PRIVATE_KEY", "AUTH", "DATABASE_URL", "CONNECTION_STRING",
+    "ACCESS_KEY", "DSN",
 ]
 
 def _sanitize_environment():
-    """Remove environment variables that look like secrets."""
+    """Remove environment variables that look like secrets (defense-in-depth)."""
     keys_to_remove = []
     for key in os.environ:
         key_upper = key.upper()
@@ -82,9 +87,12 @@ def _controlled_import(name, globals=None, locals=None, fromlist=(), level=0):
 
 
 _SAFE_BUILTINS = {
+    # Output
     "print": print,
+    # Measurement
     "len": len,
     "range": range,
+    # Types — only safe constructors, no metaclass access
     "int": int,
     "float": float,
     "str": str,
@@ -93,31 +101,34 @@ _SAFE_BUILTINS = {
     "set": set,
     "tuple": tuple,
     "bool": bool,
+    # Numeric operations
     "sum": sum,
     "min": min,
     "max": max,
     "abs": abs,
     "round": round,
+    # Predicates
     "any": any,
     "all": all,
+    # Iteration
     "enumerate": enumerate,
     "zip": zip,
     "map": map,
     "filter": filter,
     "sorted": sorted,
-    "isinstance": isinstance,
-    "type": type,
-    "repr": repr,
     "reversed": reversed,
+    # Type checking (safe — no metaclass/hierarchy access)
+    "isinstance": isinstance,
+    # String representation
+    "repr": repr,
+    # Character/number conversions
     "chr": chr,
     "ord": ord,
     "hex": hex,
     "oct": oct,
     "bin": bin,
     "format": format,
-    "hasattr": hasattr,
-    "getattr": getattr,
-    "setattr": setattr,
+    # Exceptions — needed for try/except
     "ValueError": ValueError,
     "TypeError": TypeError,
     "KeyError": KeyError,
@@ -128,11 +139,19 @@ _SAFE_BUILTINS = {
     "StopIteration": StopIteration,
     "ImportError": ImportError,
     "Exception": Exception,
+    # Constants
     "True": True,
     "False": False,
     "None": None,
     # Controlled import — only allows whitelisted modules
     "__import__": _controlled_import,
+    # ---------------------------------------------------------------
+    # REMOVED for security (see audit 2026-09-19):
+    #   getattr  — enables arbitrary attribute traversal
+    #   setattr  — enables attribute mutation
+    #   hasattr  — enables attribute probing (calls getattr internally)
+    #   type     — enables metaclass/hierarchy access
+    # ---------------------------------------------------------------
 }
 
 
@@ -144,7 +163,41 @@ _RESULT_DELIMITER = "___SANDBOX_RESULT_ENVELOPE_8f3a1b2c___"
 
 
 # ---------------------------------------------------------------------------
-# 4. Main execution
+# 4. OS-level resource limits (Linux/POSIX only)
+# ---------------------------------------------------------------------------
+def _apply_resource_limits():
+    """
+    Apply OS-level resource limits before executing user code.
+
+    On Linux/POSIX, uses the resource module to set hard limits on:
+        - CPU time (30 seconds — safety net above wall-clock timeout)
+        - Virtual address space (512 MB)
+        - File creation size (10 MB — prevent disk filling)
+        - Core dump size (disabled)
+
+    On Windows, equivalent limits are not available through Python's
+    standard library. This is a documented limitation in docs/SECURITY.md.
+    """
+    if sys.platform == "win32":
+        return
+    try:
+        import resource
+        # CPU time: 30 seconds hard limit
+        resource.setrlimit(resource.RLIMIT_CPU, (30, 30))
+        # Virtual address space: 512 MB
+        _512MB = 512 * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (_512MB, _512MB))
+        # File creation size: 10 MB
+        _10MB = 10 * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_FSIZE, (_10MB, _10MB))
+        # Core dumps: disabled
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    except (ImportError, ValueError, OSError):
+        pass  # Best-effort: not available on this platform
+
+
+# ---------------------------------------------------------------------------
+# 5. Main execution
 # ---------------------------------------------------------------------------
 def main():
     if len(sys.argv) != 2:
@@ -179,6 +232,9 @@ def main():
 
     # Sanitize environment before executing user code
     _sanitize_environment()
+
+    # Apply OS-level resource limits (Linux/POSIX only)
+    _apply_resource_limits()
 
     # Build execution namespace.
     # math and json are pre-loaded for convenience (matches original behavior).

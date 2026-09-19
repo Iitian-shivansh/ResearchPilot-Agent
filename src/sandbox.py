@@ -3,8 +3,10 @@ Sandbox module for isolated Python code execution.
 
 Provides subprocess-based execution of LLM-generated Python code with:
     - Hard timeout enforcement (OS-level process kill)
+    - AST validation (primary source-level restriction)
+    - String blocklist (defense-in-depth)
     - Restricted builtins namespace
-    - Environment variable sanitization
+    - Environment variable allowlist
     - Structured result reporting
     - Safe metadata logging (no secrets, no code content)
 
@@ -14,6 +16,7 @@ Import SandboxConfig to access or override limits.
 Security guarantees and limitations are documented in docs/SECURITY.md.
 """
 
+import ast
 import json
 import logging
 import os
@@ -101,32 +104,50 @@ _WORKER_SCRIPT = os.path.join(os.path.dirname(__file__), "_sandbox_worker.py")
 
 
 # ---------------------------------------------------------------------------
-# Blocklist — checked BEFORE sending code to the subprocess
+# Blocklist — defense-in-depth, checked BEFORE sending code to subprocess
 # ---------------------------------------------------------------------------
-# This is a defense-in-depth layer. The primary isolation comes from the
-# restricted builtins in the worker process. The blocklist catches common
-# dangerous patterns early, but a determined attacker can bypass string
-# matching. Do NOT rely on this as the sole security mechanism.
+# NOTE: AST validation (below) is the primary source-level restriction.
+# This blocklist is defense-in-depth only. String matching can be evaded
+# by encoding tricks, concatenation, or indirect access. Do NOT rely on
+# this as the sole security mechanism.
 _BLOCKED_PATTERNS = [
-    "os.system",
+    # Process and shell access
+    "os.system", "os.popen", "os.exec", "os.spawn",
     "subprocess",
+    # Filesystem
     "shutil",
     "open(",
+    "pathlib",
+    # Code execution
     "eval(",
     "exec(",
+    "compile(",
+    "breakpoint",
+    # Import mechanisms
     "__import__",
     "importlib",
-    "pathlib",
+    "load_module",
+    # Network
     "socket",
     "requests",
     "urllib",
     "http.client",
     "ftplib",
     "smtplib",
+    # Low-level / unsafe
     "ctypes",
     "multiprocessing",
     "threading",
     "signal",
+    # Introspection / escape (defense-in-depth; AST validation is primary)
+    "__subclasses__",
+    "__bases__",
+    "__mro__",
+    "__globals__",
+    "__code__",
+    "__closure__",
+    "__builtins__",
+    "__loader__",
 ]
 
 
@@ -135,8 +156,8 @@ def _check_blocked_patterns(code: str) -> Optional[str]:
     Check code against the blocklist. Returns the matched pattern if found,
     or None if the code passes.
 
-    NOTE: This is best-effort. String matching can be evaded.
-    The real isolation comes from restricted builtins + subprocess boundary.
+    NOTE: This is best-effort defense-in-depth. String matching can be evaded.
+    AST validation is the primary source-level restriction.
     """
     code_lower = code.lower()
     for pattern in _BLOCKED_PATTERNS:
@@ -146,30 +167,149 @@ def _check_blocked_patterns(code: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
-# Environment for the subprocess — strip secrets
+# AST validation — primary source-level restriction
+# ---------------------------------------------------------------------------
+# AST validation is stronger than regex/string blocklists because it operates
+# on the parsed syntax tree, not raw text. It cannot be bypassed by string
+# concatenation, encoding tricks, comment injection, or variable naming.
+# The regex blocklist above is retained as defense-in-depth.
 # ---------------------------------------------------------------------------
 
-_SENSITIVE_ENV_PATTERNS = [
-    "API_KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL",
-    "PRIVATE_KEY", "AUTH", "DATABASE_URL", "CONNECTION_STRING",
-]
+# Module whitelist — must match _sandbox_worker.py _ALLOWED_MODULES
+_ALLOWED_IMPORT_MODULES = frozenset([
+    "math", "json", "time", "re", "collections", "statistics",
+    "itertools", "functools", "string", "textwrap",
+    "decimal", "fractions", "random", "datetime",
+])
+
+# Names that must not appear as bare references in user code
+_DANGEROUS_NAMES = frozenset([
+    "exec", "eval", "compile", "breakpoint",
+    "__import__", "__builtins__",
+    "getattr", "setattr", "hasattr", "delattr",
+    "type", "globals", "locals", "vars",
+    "open", "input",
+])
+
+# Non-dunder attributes that enable dynamic loading
+_DANGEROUS_ATTRS = frozenset([
+    "load_module", "find_module", "find_spec", "module_from_spec",
+    "get_data",
+])
+
+
+def _validate_ast(code: str) -> Optional[str]:
+    """
+    Parse code as AST and reject dangerous constructs.
+
+    Returns an error message if a dangerous construct is found, or None
+    if the code passes validation.
+
+    Checks performed:
+        1. Dunder attribute access (e.g., obj.__class__, obj.__globals__)
+        2. Dangerous bare names (e.g., exec, eval, getattr, type)
+        3. Dangerous non-dunder attributes (e.g., load_module)
+        4. Import of non-whitelisted modules
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        # Let the worker report syntax errors with proper line numbers
+        return None
+
+    for node in ast.walk(tree):
+        # 1. Reject dunder attribute access
+        if isinstance(node, ast.Attribute):
+            if node.attr.startswith("__"):
+                return (
+                    f"Access to dunder attribute '{node.attr}' is not allowed "
+                    f"in the sandbox (line {getattr(node, 'lineno', '?')})"
+                )
+            if node.attr in _DANGEROUS_ATTRS:
+                return (
+                    f"Access to '{node.attr}' is not allowed "
+                    f"in the sandbox (line {getattr(node, 'lineno', '?')})"
+                )
+
+        # 2. Reject dangerous bare names
+        if isinstance(node, ast.Name) and node.id in _DANGEROUS_NAMES:
+            return (
+                f"Use of '{node.id}' is not allowed "
+                f"in the sandbox (line {getattr(node, 'lineno', '?')})"
+            )
+
+        # 3. Reject imports of non-whitelisted modules
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top not in _ALLOWED_IMPORT_MODULES:
+                    return (
+                        f"Import of '{alias.name}' is not allowed. "
+                        f"Allowed: {', '.join(sorted(_ALLOWED_IMPORT_MODULES))}"
+                    )
+
+        if isinstance(node, ast.ImportFrom):
+            if node.module:
+                top = node.module.split(".")[0]
+                if top not in _ALLOWED_IMPORT_MODULES:
+                    return (
+                        f"Import from '{node.module}' is not allowed. "
+                        f"Allowed: {', '.join(sorted(_ALLOWED_IMPORT_MODULES))}"
+                    )
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Environment allowlist for the subprocess
+# ---------------------------------------------------------------------------
+# Uses an allowlist approach: only explicitly approved variables are passed
+# to the worker. This prevents accidental exposure of API keys, tokens,
+# passwords, cloud credentials, and other secrets regardless of naming.
+#
+# Platform-specific behavior:
+#   Windows: requires SYSTEMROOT, WINDIR, COMSPEC for OS functionality
+#   Linux:   requires HOME, LANG for locale and user context
+# ---------------------------------------------------------------------------
+
+_ALLOWED_ENV_KEYS = frozenset({
+    # Windows OS requirements
+    "SYSTEMROOT", "WINDIR", "COMSPEC",
+    "TEMP", "TMP", "PATHEXT",
+    "USERPROFILE", "HOMEDRIVE", "HOMEPATH",
+    "APPDATA", "LOCALAPPDATA",
+    "PROGRAMFILES", "PROGRAMFILES(X86)", "COMMONPROGRAMFILES",
+    "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "OS",
+    # Linux OS requirements
+    "HOME", "USER", "LOGNAME", "SHELL", "TERM",
+    "TMPDIR",
+    # Locale
+    "LANG", "LANGUAGE",
+    # Shared
+    "PATH",
+    # Python runtime
+    "PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV",
+    "PYTHONDONTWRITEBYTECODE", "PYTHONUNBUFFERED",
+    "PYTHONIOENCODING", "PYTHONHASHSEED",
+})
+
+_ALLOWED_ENV_PREFIXES = ("LC_",)
 
 
 def _build_clean_env() -> dict:
     """
-    Build an environment dict for the subprocess with secrets removed.
+    Build a minimal environment for the worker subprocess.
 
-    Keeps PATH, PYTHONPATH, and other non-secret variables so that the
-    Python interpreter can start correctly. Removes anything that looks
-    like a secret based on common naming patterns.
-
-    This is best-effort — an unusual secret variable name might slip through.
+    Uses an allowlist: only variables on the approved list are included.
+    All other variables — including API keys, tokens, passwords, cloud
+    credentials, and database connection strings — are silently dropped.
     """
     clean = {}
     for key, value in os.environ.items():
         key_upper = key.upper()
-        is_sensitive = any(p in key_upper for p in _SENSITIVE_ENV_PATTERNS)
-        if not is_sensitive:
+        if key_upper in _ALLOWED_ENV_KEYS:
+            clean[key] = value
+        elif any(key_upper.startswith(p) for p in _ALLOWED_ENV_PREFIXES):
             clean[key] = value
     return clean
 
@@ -244,6 +384,20 @@ def run_code_in_subprocess(
             execution_time_ms=0.0,
         )
 
+    # Check AST for dangerous constructs (primary source-level restriction)
+    ast_error = _validate_ast(code)
+    if ast_error:
+        logger.info(
+            "Code blocked by AST validation: %s (code_length=%d)",
+            ast_error, len(code),
+        )
+        return SandboxResult(
+            success=False,
+            stderr=f"Execution blocked: {ast_error}",
+            error_type="ASTValidationError",
+            execution_time_ms=0.0,
+        )
+
     # --- Write code to a temp file ---
     tmp_file = None
     try:
@@ -269,6 +423,8 @@ def run_code_in_subprocess(
                 env=clean_env,
                 # Do not allow the child to inherit stdin
                 stdin=subprocess.DEVNULL,
+                # Explicitly close non-standard file descriptors
+                close_fds=True,
             )
         except subprocess.TimeoutExpired:
             elapsed_ms = (time.monotonic() - start_time) * 1000

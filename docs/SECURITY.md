@@ -4,7 +4,7 @@
 
 ResearchPilot-Agent uses a Plan-and-Execute architecture where an LLM (Planner) generates sub-tasks and an Executor resolves them using tools — including the `execute_python` tool, which runs LLM-generated Python code.
 
-**Primary threat**: The LLM can generate arbitrary Python code. If this code runs in the main application process without isolation, it can:
+**Primary threat**: The LLM can generate arbitrary Python code. If this code runs without isolation, it can:
 
 - **Crash the application** (infinite loop, segfault, memory exhaustion)
 - **Access secrets** (API keys in environment variables or `.env`)
@@ -13,67 +13,105 @@ ResearchPilot-Agent uses a Plan-and-Execute architecture where an LLM (Planner) 
 - **Spawn subprocesses** (execute arbitrary shell commands)
 - **Interfere with Streamlit** (corrupt shared `sys.stdout`, break the event loop)
 
-## Why Direct `exec()` Is Unsafe
+## Three-Tier Isolation Model
 
-The original implementation used:
+The sandbox provides defense-in-depth through three tiers of isolation. Each tier has different strength guarantees. **No single tier is relied upon as the sole security boundary.**
 
-```python
-exec(code, safe_globals)
-```
+### Tier 1: Python-Level Controls (source-level restrictions)
 
-inside the main Streamlit/LangGraph process. Problems:
+These controls prevent dangerous code from reaching the Python interpreter:
 
-1. **No process isolation**: A crash or infinite loop kills the entire app.
-2. **String blacklist only**: The `BLOCKED_KEYWORDS` list is trivially bypassed (e.g., `getattr(__builtins__, '__imp' + 'ort__')('os')`).
-3. **Shared `sys.stdout`**: Redirecting stdout in the same process is not thread-safe and interferes with Streamlit.
-4. **No hard timeout**: There is no way to kill an `exec()` that enters an infinite loop without killing the process itself.
-5. **Full environment access**: The code has access to all environment variables, file descriptors, and memory in the parent process.
+| Control | Mechanism | Strength |
+|---------|-----------|----------|
+| **AST validation** | Parse code as AST; reject dunder attributes, dangerous names, non-whitelisted imports | **Strong** — cannot be bypassed by string tricks |
+| **String blocklist** | Pattern matching against known dangerous strings | **Moderate** — defense-in-depth; evadable by encoding |
+| **Restricted builtins** | Limited `__builtins__` dict (no `getattr`, `setattr`, `hasattr`, `type`) | **Moderate** — enforced at runtime in worker |
+| **Import allowlist** | `_controlled_import` only allows whitelisted modules | **Strong** — runtime enforcement at import machinery level |
 
-## New Architecture
+**AST validation is the primary source-level restriction.** It operates on the parsed syntax tree, not raw text, and cannot be bypassed by string concatenation, encoding tricks, comment injection, or variable naming. The regex blocklist is retained as defense-in-depth only.
 
-### Subprocess Isolation
+### Tier 2: Process-Level Controls (execution isolation)
 
-Generated code now runs in a **separate Python subprocess**:
+These controls isolate the execution environment:
+
+| Control | Mechanism | Strength |
+|---------|-----------|----------|
+| **Subprocess isolation** | Separate PID, memory space, stdout | **Strong** |
+| **Wall-clock timeout** | `subprocess.run(timeout=...)` + OS process kill | **Strong** |
+| **Environment allowlist** | Only approved env vars passed to worker | **Strong** |
+| **File descriptor closure** | `close_fds=True` in subprocess creation | **Strong** |
+| **stdin isolation** | `stdin=subprocess.DEVNULL` | **Strong** |
+| **Parent stability** | Crash/hang in child cannot kill parent | **Strong** |
+| **Structured errors** | All failures return `SandboxResult`, never raise | **Strong** |
+
+### Tier 3: OS-Level Controls (resource/system isolation)
+
+These controls restrict the worker's use of system resources:
+
+| Control | Mechanism | Availability |
+|---------|-----------|--------------|
+| **CPU time limit** | `resource.RLIMIT_CPU` (30 seconds) | **Linux only** |
+| **Virtual memory limit** | `resource.RLIMIT_AS` (512 MB) | **Linux only** |
+| **File size limit** | `resource.RLIMIT_FSIZE` (10 MB) | **Linux only** |
+| **Core dump disabled** | `resource.RLIMIT_CORE` (0) | **Linux only** |
+
+> **⚠️ Windows limitation**: OS-level resource limits are not available through Python's standard library on Windows. On Windows, the only resource control is the wall-clock timeout. Memory and CPU are not capped. This is a documented limitation, not a bug.
+
+## Platform Differences
+
+| Feature | Linux | Windows |
+|---------|-------|---------|
+| Subprocess isolation | ✅ Full | ✅ Full |
+| Wall-clock timeout | ✅ SIGKILL | ✅ TerminateProcess |
+| Resource limits (CPU/memory/file) | ✅ via `resource` module | ❌ Not available |
+| `close_fds=True` | ✅ Closes all non-stdio FDs | ✅ No handle inheritance |
+| Environment allowlist | ✅ Full | ✅ Full |
+| AST validation | ✅ Full | ✅ Full |
+
+## What Is NOT Guaranteed
+
+> **Honest disclaimer**: A subprocess is NOT equivalent to a hardened container or VM sandbox.
+
+The following are **NOT** provided by this implementation:
+
+1. **Container/VM isolation**: The subprocess runs on the same host OS with the same user permissions. There is no Docker, gVisor, or Firecracker boundary.
+
+2. **OS-level system call filtering**: There is no seccomp, AppArmor, or SELinux profile restricting syscalls.
+
+3. **Network namespace isolation**: There is no network namespace or firewall. Network access is blocked by AST validation and import restrictions, not by the OS.
+
+4. **Filesystem mount isolation**: The subprocess can see the entire filesystem accessible to the running user. Protection relies on AST validation blocking `open()` and filesystem modules.
+
+5. **Memory/CPU limits on Windows**: On Windows, there are no resource limits beyond the wall-clock timeout. A subprocess could allocate excessive memory before timeout fires.
+
+6. **Multi-tenant isolation**: This is designed for a single-user application. It does not provide isolation between multiple untrusted users.
+
+## Execution Flow
 
 ```
 ┌──────────────────────────┐         ┌──────────────────────────┐
 │   Main Process           │         │   Worker Subprocess      │
 │   (Streamlit/LangGraph)  │         │   (_sandbox_worker.py)   │
 │                          │         │                          │
-│  execute_python(code)    │         │  1. Read code from file  │
-│       │                  │         │  2. Sanitize env vars    │
-│       ▼                  │         │  3. Restrict builtins    │
-│  run_code_in_subprocess()│ ──────► │  4. exec() in namespace  │
-│       │                  │  file   │  5. Capture stdout/err   │
-│       │                  │  +      │  6. Output JSON result   │
-│       ◄────────────────  │ stdout  │                          │
-│       │                  │         └──────────────────────────┘
-│  Parse JSON result       │               killed on timeout
-│  Return string to agent  │
+│  1. Validate code length │         │  1. Read code from file  │
+│  2. Check blocklist      │         │  2. Sanitize env vars    │
+│  3. Validate AST         │         │  3. Apply resource limits│
+│  4. Write temp file      │         │  4. Restrict builtins    │
+│  5. Launch subprocess    │──file──►│  5. exec() in namespace  │
+│  6. Enforce timeout      │         │  6. Capture stdout/err   │
+│       │                  │         │  7. Output JSON result   │
+│       ◄──────────────────│ stdout  │                          │
+│  7. Parse JSON result    │         └──────────────────────────┘
+│  8. Return SandboxResult │               killed on timeout
+│  9. Delete temp file     │
 └──────────────────────────┘
 ```
 
-### Execution Flow
-
-1. `execute_python(code)` is called by LangGraph's `ToolNode`.
-2. Pre-flight checks: empty code, code length, blocked patterns.
-3. Code is written to a temp file.
-4. A subprocess is launched with `subprocess.run(timeout=...)`.
-5. The worker script:
-   - Strips secret environment variables
-   - Builds a restricted `__builtins__` namespace
-   - Executes the code
-   - Captures stdout/stderr
-   - Outputs a JSON result envelope
-6. The parent parses the result or handles timeout/crash.
-7. Temp file is deleted.
-8. A string result is returned to the agent (same format as before).
-
-### Files Involved
+## Files Involved
 
 | File | Purpose |
 |------|---------|
-| `src/sandbox.py` | `SandboxConfig`, `SandboxResult`, `run_code_in_subprocess()` |
+| `src/sandbox.py` | `SandboxConfig`, `SandboxResult`, AST validation, `run_code_in_subprocess()` |
 | `src/_sandbox_worker.py` | Worker script executed in the subprocess |
 | `src/tools.py` | `execute_python` tool — calls `run_code_in_subprocess()` |
 
@@ -87,67 +125,55 @@ All limits are defined in `src/sandbox.py` → `SandboxConfig`:
 | `max_code_length` | 50,000 characters | Checked before subprocess launch |
 | `max_output_length` | 10,000 characters | Truncated after execution |
 
-These are the **only** places where limits are defined. To change them, modify `SandboxConfig` defaults or pass a custom config instance.
+Additional OS-level limits (Linux only, set in worker):
 
-## Isolation Guarantees
+| Limit | Default | Enforcement |
+|-------|---------|-------------|
+| CPU time | 30 seconds | `resource.RLIMIT_CPU` |
+| Virtual memory | 512 MB | `resource.RLIMIT_AS` |
+| File creation size | 10 MB | `resource.RLIMIT_FSIZE` |
+| Core dumps | Disabled | `resource.RLIMIT_CORE` |
 
-### What IS guaranteed
+## Security Audit Log
 
-| Property | Mechanism | Strength |
-|----------|-----------|----------|
-| **Process isolation** | Separate subprocess (separate PID, memory space) | **Strong** |
-| **Timeout enforcement** | `subprocess.run(timeout=...)` + OS process kill | **Strong** |
-| **Parent stability** | Crash/hang in child cannot kill parent | **Strong** |
-| **stdout separation** | Child has its own stdout, no interference with Streamlit | **Strong** |
-| **Structured errors** | All failures return `SandboxResult`, never raise to caller | **Strong** |
+### Audit: 2026-09-19
 
-### What is best-effort
+Adversarial security review of the sandbox implementation.
 
-| Property | Mechanism | Limitation |
-|----------|-----------|------------|
-| **Restricted builtins** | Limited `__builtins__` dict | Can be bypassed via `().__class__.__bases__[0].__subclasses__()` or similar object introspection |
-| **Blocked patterns** | String-matching blocklist | Can be evaded with string concatenation, encoding tricks, etc. |
-| **Environment sanitization** | Remove vars matching secret patterns | Unusual secret variable names may not be caught |
-| **No network access** | Blocked by builtins + blocklist | No OS-level firewall; a bypass of builtins could make network calls |
-| **No filesystem access** | `open()` not in builtins + blocklist | Same caveat as network — bypassable if builtins restriction is circumvented |
-| **No subprocess creation** | `subprocess` not in builtins + blocklist | Same caveat |
+**Vulnerabilities found and remediated:**
 
-## What Is NOT Guaranteed
+| # | Vulnerability | Severity | Status |
+|---|--------------|----------|--------|
+| 1 | `__subclasses__()` introspection escape via class hierarchy traversal | Critical | **Fixed** — AST validation blocks all dunder attribute access |
+| 2 | `getattr` in builtins enables arbitrary attribute traversal | Critical | **Fixed** — removed from `_SAFE_BUILTINS`, blocked by AST |
+| 3 | `type()` in builtins enables metaclass/hierarchy access | High | **Fixed** — removed from `_SAFE_BUILTINS`, blocked by AST |
+| 4 | String blocklist bypass via concatenation/encoding | High | **Fixed** — AST validation is primary (cannot be string-evaded) |
+| 5 | `exec`/`eval`/`compile` reachable via introspection | Medium | **Fixed** — AST blocks all introspection paths |
+| 6 | Whitelisted module `__globals__` leaking namespace | Medium | **Fixed** — AST blocks all dunder attribute access |
+| 7 | Inherited file descriptors accessible to worker | Low-Medium | **Fixed** — explicit `close_fds=True` |
+| 8 | Resource exhaustion (memory/CPU beyond timeout) | Medium | **Mitigated** — Linux: `resource` limits; Windows: timeout only |
+| 9 | Environment variable exposure via broad blocklist | Low | **Fixed** — switched from blocklist to allowlist approach |
 
-> **Honest disclaimer**: A subprocess is not equivalent to a hardened container sandbox.
+**Remaining limitations (unresolved by design):**
 
-The following are **NOT** provided by this implementation:
-
-1. **Container/VM isolation**: The subprocess runs on the same host OS with the same user permissions. There is no Docker, gVisor, or Firecracker boundary.
-
-2. **OS-level system call filtering**: There is no seccomp, AppArmor, or SELinux profile restricting syscalls. A builtins bypass could make any syscall the OS user has permission for.
-
-3. **Network namespace isolation**: There is no network namespace or firewall. Network access is blocked by the builtins restriction, not by the OS.
-
-4. **Resource limits (CPU/memory)**: There is no cgroup, `ulimit`, or memory cap. A subprocess could theoretically allocate excessive memory before the timeout fires.
-
-5. **Filesystem mount isolation**: The subprocess can see the entire filesystem accessible to the running user. Protection relies on `open()` not being in the safe builtins.
-
-6. **Multi-tenant isolation**: This is designed for a single-user application. It does not provide isolation between multiple untrusted users.
-
-## Remaining Security Risks
-
-1. **Determined attacker bypass**: An attacker who can control the LLM output could craft code that bypasses the restricted builtins using Python introspection (e.g., walking the class hierarchy to find `os` or `subprocess`).
-
-2. **Resource exhaustion**: Memory-intensive code could impact the host before the timeout fires. CPU-bound code will consume one core for up to `max_execution_seconds`.
-
-3. **Timing attacks**: Execution time is reported. An attacker could infer information about the host from timing variations.
-
-4. **Temp file race conditions**: The code is written to a temp file briefly. On a shared system, another user could theoretically read it.
+| Limitation | Reason |
+|-----------|--------|
+| No container/VM isolation | Out of scope for subprocess architecture |
+| No seccomp/AppArmor | Requires OS-level configuration |
+| No network namespace | Requires container or OS-level isolation |
+| No filesystem mount isolation | Requires container or chroot |
+| No resource limits on Windows | Python `resource` module not available |
+| No multi-tenant isolation | Single-user application by design |
 
 ## Recommended Future Improvements
 
 For production deployments handling untrusted input:
 
 1. **Container isolation**: Run the worker in a Docker/Podman container with `--network=none` and read-only filesystem.
-2. **Resource limits**: Use cgroups or container resource limits to cap memory and CPU.
+2. **Resource limits**: Use cgroups or container resource limits to cap memory and CPU on all platforms.
 3. **seccomp profiles**: Restrict available system calls to the minimum needed.
 4. **Ephemeral environments**: Create and destroy execution environments per request.
+5. **Network firewall**: Use OS-level firewall rules to block outbound connections.
 
 ## How to Run the Security Tests
 
@@ -156,19 +182,20 @@ For production deployments handling untrusted input:
 python -m pytest tests/test_sandbox.py -v
 
 # Run a specific test category
-python -m pytest tests/test_sandbox.py::TestSandboxTimeout -v
-python -m pytest tests/test_sandbox.py::TestSandboxNetworkBlocked -v
+python -m pytest tests/test_sandbox.py::TestASTValidator -v
+python -m pytest tests/test_sandbox.py::TestIntrospectionEscape -v
+python -m pytest tests/test_sandbox.py::TestResourceExhaustion -v
 
 # Run with output visible
 python -m pytest tests/test_sandbox.py -v -s
 ```
 
-The tests do NOT require any API keys or external services. They test the sandbox module directly.
+The tests do NOT require any API keys or external services.
 
 ### Test Categories
 
 | # | Category | What It Verifies |
-|---|----------|-----------------|
+|---|----------|--------------------|
 | 1 | Normal execution | `print()`, math, json, list comprehensions |
 | 2 | Syntax errors | Malformed code returns `SyntaxError` |
 | 3 | Runtime exceptions | Division by zero, NameError, TypeError, IndexError |
@@ -176,6 +203,16 @@ The tests do NOT require any API keys or external services. They test the sandbo
 | 5 | Oversized code | Code exceeding `max_code_length` rejected pre-launch |
 | 6 | Oversized output | Output exceeding `max_output_length` truncated |
 | 7 | Network access | `socket`, `requests`, `urllib`, `http.client` blocked |
-| 8 | Environment variables | Secrets stripped from subprocess environment |
+| 8 | Environment variables | Secrets not passed to subprocess |
 | 9 | Filesystem access | `open()`, `pathlib`, `shutil` blocked |
-| 10 | Subprocess/shell | `subprocess`, `os.system`, `exec()`, `eval()`, `__import__` blocked |
+| 10 | Subprocess/shell | `subprocess`, `os.system`, `exec()`, `eval()` blocked |
+| 11 | **AST validator** | Direct validation of safe/dangerous patterns |
+| 12 | **Introspection escape** | `__class__`, `__bases__`, `__subclasses__`, `__globals__` |
+| 13 | **Indirect builtins** | `getattr`, `type`, `globals`, `eval`, `compile` |
+| 14 | **Dynamic import** | `importlib`, `__loader__`, `builtins` module |
+| 15 | **Indirect filesystem** | Introspection chains to `open()` |
+| 16 | **Indirect subprocess** | Introspection chains to `Popen` |
+| 17 | **Indirect network** | Introspection chains to `socket` |
+| 18 | **Secret discovery** | Environment allowlist verification |
+| 19 | **File descriptor** | FD inheritance, `close_fds` verification |
+| 20 | **Resource exhaustion** | Memory, recursion, parent stability |

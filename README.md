@@ -100,7 +100,25 @@ The retrieval tool expects:
 - payload field `text` containing the indexed chunk
 - optional payload fields `document_id` and `chunk_index` for result labels
 
-This repository currently contains the retrieval client but **does not contain a document-ingestion/indexing pipeline**. Populate the collection separately before testing knowledge-base questions.
+The repository includes a local document-ingestion command for `.txt` and `.md` files. It recursively scans a directory, normalizes and chunks text, creates or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point IDs. Re-running the command for unchanged files is safe because the same chunks receive the same IDs.
+
+```bash
+python ingest.py ./knowledge_base
+```
+
+The command expects `QDRANT_URL`, `QDRANT_API_KEY`, and `GEMINI_API_KEY` in `.env`. Optional settings are available for collection name and chunking:
+
+```bash
+python ingest.py ./knowledge_base --collection documents --chunk-size 1200 --chunk-overlap 200 --batch-size 64
+```
+
+Each point contains the payload fields used by retrieval:
+
+- `text`: normalized document chunk
+- `document_id`: path relative to the ingested directory
+- `chunk_index`: zero-based chunk number
+
+PDF ingestion is intentionally not included yet; add a parser and its dependency only when PDF support is required.
 
 ## Run the application
 
@@ -136,6 +154,12 @@ The sandbox tests do not require API keys or external services:
 python -m unittest tests.test_sandbox -v
 ```
 
+The ingestion tests use fake embedding and Qdrant clients and do not require API keys:
+
+```bash
+python -m unittest tests.test_ingestion -v
+```
+
 If `pytest` is installed, the equivalent command is:
 
 ```bash
@@ -167,8 +191,8 @@ This is a subprocess-based defense-in-depth sandbox, not a hardened container or
 
 - Groq free-tier rate limits can make requests slow or fail temporarily.
 - Tool-call formatting errors from the LLM are retried once with simplified instructions.
-- Knowledge-base retrieval depends on an externally populated Qdrant collection.
-- There is no automated ingestion pipeline yet.
+- Knowledge-base retrieval depends on Qdrant and Gemini credentials.
+- The ingestion pipeline currently supports `.txt` and `.md`; PDF parsing is not included.
 - Agent and Streamlit integration tests are not yet included.
 - Windows does not receive the Linux-only CPU and memory limits.
 - Citation checking in `evaluate.py` is heuristic rather than a formal correctness metric.
@@ -177,10 +201,10 @@ This is a subprocess-based defense-in-depth sandbox, not a hardened container or
 
 The core agent, UI, integrations, sandbox, documentation, and sandbox test suite are implemented. The most useful next improvements are:
 
-1. Add a repeatable document-ingestion pipeline for Qdrant.
-2. Add mocked tests for planner, executor, critic, tool routing, and error paths.
-3. Add Streamlit smoke/integration coverage.
-4. Improve structured citation extraction and evaluation.
+1. Add mocked tests for planner, executor, critic, tool routing, and error paths.
+2. Add Streamlit smoke/integration coverage.
+3. Improve structured citation extraction and evaluation.
+4. Add optional PDF ingestion.
 5. Consider container-based execution for stronger isolation in production.
 
 ## License

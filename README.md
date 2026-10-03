@@ -104,8 +104,9 @@ The retrieval tool expects:
 - vector embeddings compatible with `models/gemini-embedding-001`
 - payload field `text` containing the indexed chunk
 - optional payload fields `document_id` and `chunk_index` for result labels
+- `source_hash` and `ingestion_run_id` for lifecycle tracking
 
-The repository includes a local document-ingestion command for `.txt` and `.md` files. It recursively scans a directory, normalizes and chunks text, creates or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point IDs. Re-running the command for unchanged files is safe because the same chunks receive the same IDs.
+The repository includes a local document-ingestion command for `.txt` and `.md` files. It recursively scans a directory, normalizes and chunks text, creates or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point IDs. Before replacing a source, it deletes that source's previous chunks, preventing stale content from surviving after a file is edited. Re-running the command for unchanged files is safe.
 
 ```bash
 python ingest.py ./knowledge_base
@@ -124,6 +125,17 @@ Each point contains the payload fields used by retrieval:
 - `chunk_index`: zero-based chunk number
 
 PDF ingestion is intentionally not included yet; add a parser and its dependency only when PDF support is required.
+
+Retrieval can be tuned without code changes:
+
+```env
+KB_TOP_K=5
+KB_SCORE_THRESHOLD=0.0
+```
+
+`KB_TOP_K` limits the number of Qdrant results and `KB_SCORE_THRESHOLD` filters low-scoring
+matches. The retrieval tool returns structured evidence IDs such as `[KB-1]` with document,
+chunk, score, and excerpt metadata.
 
 ## Run the application
 
@@ -169,6 +181,12 @@ The ingestion tests use fake embedding and Qdrant clients and do not require API
 
 ```bash
 python -m unittest tests.test_ingestion -v
+```
+
+Retrieval configuration and evidence formatting are covered by mocked tests:
+
+```bash
+python -m unittest tests.test_tools -v
 ```
 
 If `pytest` is installed, the equivalent command is:
@@ -226,8 +244,8 @@ The core agent, UI, integrations, sandbox, documentation, ingestion pipeline, st
 
 1. Add Streamlit smoke/integration coverage.
 2. Improve citation extraction and evaluation beyond heuristics.
-3. Add source versioning and stale-chunk replacement to ingestion.
-4. Add optional PDF ingestion.
+3. Add optional PDF ingestion.
+4. Add task-scoped attachments without mixing them into the shared collection.
 5. Consider container-based execution for stronger isolation in production.
 
 ## License

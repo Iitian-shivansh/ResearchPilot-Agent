@@ -29,6 +29,7 @@ class FakeQdrant:
         self.vector_size = vector_size
         self.created: list[dict] = []
         self.upserts: list[list] = []
+        self.deletes: list[dict] = []
 
     def collection_exists(self, collection_name: str) -> bool:
         return self.exists
@@ -46,6 +47,9 @@ class FakeQdrant:
 
     def upsert(self, **kwargs) -> None:
         self.upserts.append(kwargs["points"])
+
+    def delete(self, **kwargs) -> None:
+        self.deletes.append(kwargs)
 
 
 class TestIngestion(TestCase):
@@ -86,7 +90,10 @@ class TestIngestion(TestCase):
             self.assertEqual(point.payload["text"], "alpha beta gamma")
             self.assertEqual(point.payload["document_id"], "notes.md")
             self.assertEqual(point.payload["chunk_index"], 0)
+            self.assertEqual(len(point.payload["source_hash"]), 64)
+            self.assertTrue(point.payload["ingestion_run_id"])
             self.assertEqual(len(point.vector), 3)
+            self.assertEqual(len(client.deletes), 1)
 
     def test_ingest_validates_existing_collection_vector_size(self):
         with TemporaryDirectory() as directory:
@@ -115,3 +122,20 @@ class TestIngestion(TestCase):
                 first_client.upserts[0][0].id,
                 second_client.upserts[0][0].id,
             )
+
+    def test_ingest_deletes_previous_chunks_when_source_changes(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "notes.txt"
+            path.write_text("old content", encoding="utf-8")
+            client = FakeQdrant()
+            embeddings = FakeEmbeddings()
+
+            ingest_directory(root, client, embeddings)
+            first_hash = client.upserts[0][0].payload["source_hash"]
+            path.write_text("new content", encoding="utf-8")
+            ingest_directory(root, client, embeddings)
+
+            second_hash = client.upserts[-1][0].payload["source_hash"]
+            self.assertNotEqual(first_hash, second_hash)
+            self.assertEqual(len(client.deletes), 2)

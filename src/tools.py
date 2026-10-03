@@ -11,6 +11,32 @@ from src.sandbox import run_code_in_subprocess
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_KB_LIMIT = 5
+DEFAULT_KB_SCORE_THRESHOLD = 0.0
+MAX_KB_RESULT_CHARS = 1200
+
+
+def _knowledge_base_limit() -> int:
+    try:
+        return max(1, int(os.getenv("KB_TOP_K", DEFAULT_KB_LIMIT)))
+    except ValueError:
+        logger.warning("Invalid KB_TOP_K; using %d", DEFAULT_KB_LIMIT)
+        return DEFAULT_KB_LIMIT
+
+
+def _knowledge_base_threshold() -> float:
+    try:
+        return max(0.0, min(1.0, float(os.getenv(
+            "KB_SCORE_THRESHOLD", DEFAULT_KB_SCORE_THRESHOLD
+        ))))
+    except ValueError:
+        logger.warning(
+            "Invalid KB_SCORE_THRESHOLD; using %.2f",
+            DEFAULT_KB_SCORE_THRESHOLD,
+        )
+        return DEFAULT_KB_SCORE_THRESHOLD
+
+
 @tool
 def query_knowledge_base(query: str) -> str:
     """
@@ -32,8 +58,9 @@ def query_knowledge_base(query: str) -> str:
         results = client.query_points(
             collection_name="documents",
             query=query_vector,
-            limit=5,
-            with_payload=True
+            limit=_knowledge_base_limit(),
+            score_threshold=_knowledge_base_threshold(),
+            with_payload=True,
         )
         
         # Format results
@@ -45,7 +72,7 @@ def query_knowledge_base(query: str) -> str:
             ).to_json()
             
         formatted_results = []
-        MAX_TOTAL_CHARS = 1200 # Keep well within Groq's 6000 TPM limit and JSON formatting limits
+        evidence_points = []
         current_chars = 0
         
         for point in results.points:
@@ -64,11 +91,12 @@ def query_knowledge_base(query: str) -> str:
                 f"Chunk: {chunk_index} | Score: {score:.3f}]\n{text}"
             )
             
-            if current_chars + len(chunk_str) > MAX_TOTAL_CHARS:
+            if current_chars + len(chunk_str) > MAX_KB_RESULT_CHARS:
                 formatted_results.append("[Remaining results truncated to fit token limits]")
                 break
                 
             formatted_results.append(chunk_str)
+            evidence_points.append(point)
             current_chars += len(chunk_str)
             
         return ToolResult(
@@ -83,7 +111,7 @@ def query_knowledge_base(query: str) -> str:
                     excerpt=str((point.payload or {}).get("text", ""))[:500],
                     score=point.score,
                 )
-                for index, point in enumerate(results.points, start=1)
+                for index, point in enumerate(evidence_points, start=1)
             ),
         ).to_json()
     except Exception as e:

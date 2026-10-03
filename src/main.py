@@ -40,6 +40,8 @@ def print_message_trace(event):
             messages = state_update.get("messages", [])
             if messages and messages[-1].type == "human" and "Critic Feedback:" in str(messages[-1].content):
                 print(f"Critic requested revision:\n{messages[-1].content}")
+            elif state_update.get("critic_status") == "unavailable":
+                print("Critic unavailable: draft is unverified.")
             else:
                 print(f"Critic APPROVED the answer.")
                 

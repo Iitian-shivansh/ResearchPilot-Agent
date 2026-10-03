@@ -16,6 +16,8 @@ The agent accepts a natural-language question, creates a short plan, uses the ap
 - Streamlit UI with expandable planner, tool-call, tool-output, draft, and critic traces.
 - CLI entry point for running the agent without Streamlit.
 - One critic-driven revision cycle and safeguards against unbounded tool loops.
+- Explicit run, critic, and citation statuses so failed verification is not shown as approval.
+- Structured tool-result envelopes with evidence identifiers for knowledge-base and calculation outputs.
 
 ## Architecture
 
@@ -43,11 +45,14 @@ The executor is configured with `qwen/qwen3.8-27b` through `langchain-groq`. Too
 |---|---|
 | `app.py` | Streamlit application |
 | `src/agent.py` | LangGraph workflow and retry/safeguard logic |
+| `src/contracts.py` | Structured tool results and evidence models |
 | `src/tools.py` | Tavily, Qdrant, and Python tools |
 | `src/sandbox.py` | Sandbox validation, limits, subprocess orchestration, and result parsing |
 | `src/_sandbox_worker.py` | Restricted worker process that executes generated Python |
 | `src/main.py` | CLI runner with a textual execution trace |
 | `tests/test_sandbox.py` | Sandbox and security tests |
+| `tests/test_agent.py` | Mocked planner, executor, synthesis, and critic graph tests |
+| `tests/test_contracts.py` | Tool-result and evidence contract tests |
 | `test_connections.py` | Optional Qdrant and Gemini connectivity checks |
 | `test_models.py` | Optional Groq model-list diagnostic |
 | `evaluate.py` | Runs the sample evaluation questions and rewrites `EVALUATION.md` |
@@ -154,6 +159,12 @@ The sandbox tests do not require API keys or external services:
 python -m unittest tests.test_sandbox -v
 ```
 
+The agent graph also has deterministic tests with injected fake LLMs and tools:
+
+```bash
+python -m unittest tests.test_agent -v
+```
+
 The ingestion tests use fake embedding and Qdrant clients and do not require API keys:
 
 ```bash
@@ -187,23 +198,35 @@ The worker additionally restricts builtins and imports, captures output, and ret
 
 This is a subprocess-based defense-in-depth sandbox, not a hardened container or VM. It does not provide seccomp, filesystem mount isolation, network namespaces, or multi-tenant isolation. See [`docs/SECURITY.md`](docs/SECURITY.md) before using it with untrusted workloads.
 
+## Phase one reliability work
+
+The agent graph now separates execution outcomes such as `completed`, `completed_after_revision`,
+`critic_unavailable`, `planner_failed`, `executor_failed`, and `synthesis_failed`. If the tool
+budget is exhausted, the graph runs a dedicated synthesis step instead of terminating on a tool
+call. Tool outputs use a stable JSON envelope and may include evidence IDs such as `[KB-1]` or
+`[CALC-1]`, which the critic checks before approval.
+
+This design is intentionally resume-friendly: the graph can be tested without API keys by
+injecting fake LLM/tool implementations, while production construction still uses Groq, Tavily,
+Gemini, and Qdrant.
+
 ## Known limitations
 
 - Groq free-tier rate limits can make requests slow or fail temporarily.
 - Tool-call formatting errors from the LLM are retried once with simplified instructions.
 - Knowledge-base retrieval depends on Qdrant and Gemini credentials.
 - The ingestion pipeline currently supports `.txt` and `.md`; PDF parsing is not included.
-- Agent and Streamlit integration tests are not yet included.
+- Streamlit browser-level integration tests are not yet included.
 - Windows does not receive the Linux-only CPU and memory limits.
 - Citation checking in `evaluate.py` is heuristic rather than a formal correctness metric.
 
 ## Project status and next gaps
 
-The core agent, UI, integrations, sandbox, documentation, and sandbox test suite are implemented. The most useful next improvements are:
+The core agent, UI, integrations, sandbox, documentation, ingestion pipeline, structured evidence contracts, and mocked agent test suite are implemented. The most useful next improvements are:
 
-1. Add mocked tests for planner, executor, critic, tool routing, and error paths.
-2. Add Streamlit smoke/integration coverage.
-3. Improve structured citation extraction and evaluation.
+1. Add Streamlit smoke/integration coverage.
+2. Improve citation extraction and evaluation beyond heuristics.
+3. Add source versioning and stale-chunk replacement to ingestion.
 4. Add optional PDF ingestion.
 5. Consider container-based execution for stronger isolation in production.
 

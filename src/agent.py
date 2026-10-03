@@ -1,223 +1,292 @@
-"""
-Agent logic using LangGraph.
+"""Plan-and-execute research agent with explicit reliability contracts."""
 
-This module defines the Plan-and-Execute agent:
-1. Planner: Breaks query into sub-tasks.
-2. Executor: Uses tools to solve the plan sequentially.
-3. Critic: Reviews draft for completeness and citations.
-"""
+from __future__ import annotations
 
 import time
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, NotRequired, TypedDict
+
 import groq
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AnyMessage
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
-from src.tools import get_tools
 
-# --- Agent-level constants ---
-# Maximum number of executor → tools → executor round-trips before forcing
-# the executor to produce a final answer. Prevents infinite looping when the
-# LLM keeps requesting tools instead of synthesizing an answer.
+from src.contracts import parse_tool_result
+
 MAX_TOOL_ROUNDS = 4
-
-# Seconds to wait before retrying after a Groq rate-limit (429) error.
+MAX_TOOL_ERRORS = 2
 RATE_LIMIT_RETRY_DELAY = 5
+
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     plan: str
     revision_count: int
+    run_status: NotRequired[str]
+    critic_status: NotRequired[str]
+    citation_status: NotRequired[str]
 
-def create_agent_graph():
-    llm = ChatGroq(model="qwen/qwen3.8-27b", temperature=0)
-    tools = get_tools()
+
+def _is_rate_limit(error: Exception) -> bool:
+    text = str(error).lower()
+    return "429" in text or "rate" in text
+
+
+def _tool_rounds(messages: list[AnyMessage]) -> int:
+    return sum(1 for message in messages if message.type == "tool")
+
+
+def _recent_tool_errors(messages: list[AnyMessage]) -> int:
+    count = 0
+    for message in reversed(messages):
+        if message.type != "tool":
+            if message.type == "ai":
+                continue
+            break
+        result = parse_tool_result(str(message.content))
+        if result is not None:
+            if result.ok:
+                break
+        elif "error" not in str(message.content).lower():
+            break
+        count += 1
+    return count
+
+
+def _citation_status(messages: list[AnyMessage], draft: str) -> str:
+    evidence_ids: list[str] = []
+    for message in messages:
+        if message.type != "tool":
+            continue
+        result = parse_tool_result(str(message.content))
+        if result:
+            evidence_ids.extend(item.evidence_id for item in result.evidence)
+    if not evidence_ids:
+        return "not_required"
+    if any(evidence_id in draft for evidence_id in evidence_ids) or "source" in draft.lower():
+        return "present"
+    return "missing"
+
+
+def create_agent_graph(
+    llm=None,
+    tools=None,
+    rate_limit_delay: float = RATE_LIMIT_RETRY_DELAY,
+    max_tool_rounds: int = MAX_TOOL_ROUNDS,
+    max_tool_errors: int = MAX_TOOL_ERRORS,
+):
+    """Build the production graph, accepting injected dependencies for tests."""
+
+    llm = llm or ChatGroq(model="qwen/qwen3.8-27b", temperature=0)
+    if tools is None:
+        from src.tools import get_tools
+
+        tools = get_tools()
     llm_with_tools = llm.bind_tools(tools)
-    
+
     def planner_node(state: AgentState):
-        messages = state["messages"]
-        query = messages[0].content if messages else ""
-        
+        query = state["messages"][0].content if state["messages"] else ""
         sys_msg = SystemMessage(
             content=(
                 "You are a planning assistant. Break the user's research question "
-                "into concrete sub-tasks.\n"
-                "- For simple factual questions (e.g. 'What is X?', 'Who is Y?'), "
-                "output just 1 sub-task.\n"
-                "- For complex multi-part questions, output 2 to 4 sub-tasks.\n"
-                "Output ONLY the numbered list of sub-tasks, nothing else. "
-                "Keep it brief to save tokens."
+                "into concrete sub-tasks. Use 1 task for simple questions and 2-4 "
+                "for complex questions. Output only a brief numbered list."
             )
         )
-        
         try:
             response = llm.invoke([sys_msg, HumanMessage(content=query)])
-        except Exception as e:
-            error_str = str(e)
-            if "429" in error_str or "rate" in error_str.lower():
-                print(f"\n[Warning] Rate limit hit in planner, retrying in {RATE_LIMIT_RETRY_DELAY}s...")
-                time.sleep(RATE_LIMIT_RETRY_DELAY)
+        except Exception as error:
+            if not _is_rate_limit(error):
+                return {
+                    "run_status": "planner_failed",
+                    "messages": [AIMessage(content="The research plan could not be created.")],
+                }
+            time.sleep(rate_limit_delay)
+            try:
                 response = llm.invoke([sys_msg, HumanMessage(content=query)])
-            else:
-                raise
-        return {"plan": response.content, "revision_count": 0}
-        
+            except Exception as retry_error:
+                return {
+                    "run_status": "planner_failed",
+                    "messages": [
+                        AIMessage(content=f"Planning failed after retry: {type(retry_error).__name__}")
+                    ],
+                }
+        return {"plan": response.content, "revision_count": 0, "run_status": "planned"}
+
     def executor_node(state: AgentState):
-        messages = state["messages"]
-        plan = state.get("plan", "")
-        
         sys_msg = SystemMessage(
             content=(
-                "You are an executor assistant. Follow this plan sequentially to solve the user's original query:\n"
-                f"{plan}\n\n"
-                "Only use tools when you do not know the answer with high confidence.\n"
-                "For simple factual questions you can answer directly without tools.\n"
-                "When using execute_python based on knowledge base text, pass the text directly as a string literal. "
-                "Never call tools from inside the Python code.\n"
-                "Once you have completed the plan, synthesize a final cohesive draft answer."
+                "You are the research executor. Follow this plan:\n"
+                f"{state.get('plan', '')}\n\n"
+                "Use tools when evidence is needed. Synthesize a cohesive draft after "
+                "the plan is complete. Cite structured evidence IDs such as [KB-1] "
+                "or [CALC-1] when tool evidence supports a claim."
             )
         )
-        
-        full_messages = [sys_msg] + messages
-        
         try:
-            response = llm_with_tools.invoke(full_messages)
-        except groq.BadRequestError as e:
-            print(f"\n[Warning] Groq formatting error caught: {e}. Retrying once with simplified constraints...")
-            retry_msg = HumanMessage(content="System Note: Your previous tool call failed due to malformed JSON formatting. Keep any string arguments concise and avoid unnecessary special characters or extremely long inline text.")
-            try:
-                response = llm_with_tools.invoke(full_messages + [retry_msg])
-            except Exception as e2:
-                print(f"\n[Error] Tool call formatting failed after retry.")
-                return {"messages": [AIMessage(content="Tool call formatting failed after retry \u2014 try rephrasing your question or breaking it into smaller steps.")]}
-        except Exception as e:
-            error_str = str(e)
-            # Handle rate-limit (429) errors with a retry + backoff
-            if "429" in error_str or "rate" in error_str.lower():
-                print(f"\n[Warning] Rate limit hit, retrying in {RATE_LIMIT_RETRY_DELAY}s...")
-                time.sleep(RATE_LIMIT_RETRY_DELAY)
-                try:
-                    response = llm_with_tools.invoke(full_messages)
-                except Exception as e2:
-                    print(f"\n[Error] LLM call failed after rate-limit retry: {e2}")
-                    return {"messages": [AIMessage(content="Rate limit exceeded on the LLM API. Please wait a moment and try again.")]}
-            else:
-                print(f"\n[Error] LLM call failed: {e}")
-                return {"messages": [AIMessage(content=f"An unexpected error occurred during the LLM call: {type(e).__name__}")]}
-            
-        return {"messages": [response]}
-        
-    def should_continue_executor(state: AgentState) -> Literal["tools", "critic", END]:
-        messages = state["messages"]
-        last_message = messages[-1]
-        
-        if last_message.tool_calls:
-            # --- Hard cap on total tool-call rounds ---
-            # Count how many tool-call round-trips have occurred so far.
-            # Each round is: executor sends tool_calls → tools node returns results.
-            tool_round_count = sum(
-                1 for msg in messages if msg.type == "tool"
+            response = llm_with_tools.invoke([sys_msg] + state["messages"])
+        except groq.BadRequestError:
+            retry_msg = HumanMessage(
+                content=(
+                    "The previous tool call was malformed. Retry with concise arguments "
+                    "and valid JSON, or provide a final answer without that tool."
+                )
             )
-            if tool_round_count >= MAX_TOOL_ROUNDS:
-                print(f"\n[Safeguard] Tool rounds exceeded limit ({MAX_TOOL_ROUNDS} max). Stopping loop.")
-                return END
+            try:
+                response = llm_with_tools.invoke([sys_msg] + state["messages"] + [retry_msg])
+            except Exception as error:
+                return {
+                    "run_status": "executor_failed",
+                    "messages": [AIMessage(content=f"Tool-call formatting failed: {type(error).__name__}")],
+                }
+        except Exception as error:
+            if not _is_rate_limit(error):
+                return {
+                    "run_status": "executor_failed",
+                    "messages": [AIMessage(content=f"Executor failed: {type(error).__name__}")],
+                }
+            time.sleep(rate_limit_delay)
+            try:
+                response = llm_with_tools.invoke([sys_msg] + state["messages"])
+            except Exception as retry_error:
+                return {
+                    "run_status": "executor_failed",
+                    "messages": [AIMessage(content=f"Executor retry failed: {type(retry_error).__name__}")],
+                }
+        return {"messages": [response], "run_status": "executing"}
 
-            # --- Consecutive error cap (original safeguard) ---
-            error_count = 0
-            for i in range(len(messages) - 2, -1, -1):
-                msg = messages[i]
-                if msg.type == "tool":
-                    if "Execution error:" in str(msg.content) or "Error querying" in str(msg.content):
-                        error_count += 1
-                    else:
-                        break  # Found a successful tool call, stop counting
-                elif msg.type == "ai":
-                    continue
-                else:
-                    break
-            
-            if error_count >= 2:
-                print("\n[Safeguard] Tool errors exceeded retry limit (2 max). Stopping loop.")
-                return END
-                
-            return "tools"
-            
-        return "critic"
-        
+    def synthesis_node(state: AgentState):
+        prompt = SystemMessage(
+            content=(
+                "Produce the best final answer from the available evidence. Do not "
+                "request more tools. State limitations clearly and cite evidence IDs "
+                "when present. This is a forced synthesis because the tool budget or "
+                "tool-error budget was reached."
+            )
+        )
+        try:
+            response = llm.invoke([prompt] + state["messages"])
+        except Exception as error:
+            return {
+                "run_status": "synthesis_failed",
+                "messages": [AIMessage(content="The agent could not synthesize a final answer.")],
+            }
+        return {
+            "run_status": "synthesized_with_limit",
+            "messages": [response],
+            "citation_status": _citation_status(state["messages"], str(response.content)),
+        }
+
+    def should_continue_executor(state: AgentState) -> Literal["tools", "critic", "synthesis", END]:
+        if state.get("run_status") == "executor_failed":
+            return END
+        last_message = state["messages"][-1]
+        if not last_message.tool_calls:
+            return "critic"
+        if _tool_rounds(state["messages"]) >= max_tool_rounds:
+            return "synthesis"
+        if _recent_tool_errors(state["messages"]) >= max_tool_errors:
+            return "synthesis"
+        return "tools"
+
     def critic_node(state: AgentState):
         messages = state["messages"]
-        original_query = messages[0].content
-        draft = messages[-1].content
-        plan = state.get("plan", "")
-        
-        sys_msg = SystemMessage(
+        draft = str(messages[-1].content)
+        citation_status = _citation_status(messages, draft)
+        if citation_status == "missing" and state.get("revision_count", 0) == 0:
+            return {
+                "messages": [
+                    HumanMessage(
+                        content=(
+                            "Critic Feedback: cite the supporting evidence IDs in the "
+                            "draft, or explicitly state that the claim is unsupported."
+                        )
+                    )
+                ],
+                "revision_count": 1,
+                "critic_status": "revision_requested",
+                "citation_status": citation_status,
+            }
+
+        prompt = HumanMessage(
             content=(
-                "You are a reviewer. Review the Draft Answer against the Original Query and Plan.\n"
-                "Tasks:\n"
-                "1. Check if the query was answered correctly and completely.\n"
-                "2. For complex research questions, verify claims are supported by citations from tools.\n"
-                "3. For simple factual questions (e.g. 'What is X?'), well-known facts do NOT need tool citations.\n"
-                "If the draft answers the query correctly, output EXACTLY: 'APPROVED'.\n"
-                "Only reject if the answer is factually wrong, incomplete, or a complex question lacks sources. "
-                "If rejecting, provide a BRIEF 1-sentence critique. Do NOT output 'APPROVED'."
+                f"Original query: {messages[0].content}\n"
+                f"Plan: {state.get('plan', '')}\n"
+                f"Draft: {draft}\n"
+                f"Citation status: {citation_status}\n"
+                "Reply APPROVED only if the draft is complete and evidence-supported. "
+                "Otherwise provide one brief correction."
             )
         )
-        
-        prompt = f"Original Query: {original_query}\nPlan: {plan}\nDraft Answer: {draft}"
         try:
-            response = llm.invoke([sys_msg, HumanMessage(content=prompt)])
-        except Exception as e:
-            error_str = str(e)
-            if "429" in error_str or "rate" in error_str.lower():
-                print(f"\n[Warning] Rate limit hit in critic, retrying in {RATE_LIMIT_RETRY_DELAY}s...")
-                time.sleep(RATE_LIMIT_RETRY_DELAY)
+            response = llm.invoke(
+                [
+                    SystemMessage(
+                        content=(
+                            "You are a strict research reviewer. Check correctness, "
+                            "completeness, and support for important claims."
+                        )
+                    ),
+                    prompt,
+                ]
+            )
+        except Exception as error:
+            if _is_rate_limit(error):
+                time.sleep(rate_limit_delay)
                 try:
-                    response = llm.invoke([sys_msg, HumanMessage(content=prompt)])
+                    response = llm.invoke([prompt])
                 except Exception:
-                    # If still failing, just approve to avoid an infinite error loop
-                    print("\n[Warning] Critic rate-limited after retry, auto-approving.")
-                    return {}
+                    return {
+                        "run_status": "critic_unavailable",
+                        "critic_status": "unavailable",
+                        "citation_status": citation_status,
+                    }
             else:
-                print(f"\n[Warning] Critic failed: {e}, auto-approving to avoid crash.")
-                return {}
-        
-        review = response.content.strip()
+                return {
+                    "run_status": "critic_unavailable",
+                    "critic_status": "unavailable",
+                    "citation_status": citation_status,
+                }
+
+        review = str(response.content).strip()
         if "APPROVED" in review.upper() or state.get("revision_count", 0) >= 1:
-            return {} # No state changes, proceed to END
-            
-        # Needs revision
+            return {
+                "run_status": (
+                    "completed_after_revision"
+                    if state.get("revision_count", 0)
+                    else "completed"
+                ),
+                "critic_status": "approved",
+                "citation_status": citation_status,
+            }
         return {
-            "messages": [HumanMessage(content=f"Critic Feedback: {review}. Please fix these issues and provide an updated final answer.")],
-            "revision_count": state.get("revision_count", 0) + 1
+            "messages": [HumanMessage(content=f"Critic Feedback: {review}")],
+            "revision_count": state.get("revision_count", 0) + 1,
+            "critic_status": "revision_requested",
+            "citation_status": citation_status,
         }
-        
+
     def should_loop_critic(state: AgentState) -> Literal["executor", END]:
-        # If the last message is a HumanMessage from the critic, we loop back
-        if state["messages"][-1].type == "human" and "Critic Feedback:" in str(state["messages"][-1].content):
+        if state["messages"][-1].type == "human" and "Critic Feedback:" in str(
+            state["messages"][-1].content
+        ):
             return "executor"
         return END
 
-    # Construct the Graph
     workflow = StateGraph(AgentState)
-    
     workflow.add_node("planner", planner_node)
     workflow.add_node("executor", executor_node)
+    workflow.add_node("synthesis", synthesis_node)
     workflow.add_node("tools", ToolNode(tools))
     workflow.add_node("critic", critic_node)
-    
     workflow.add_edge(START, "planner")
-    workflow.add_edge("planner", "executor")
-    
-    # Executor loops with tools until it returns a draft, then goes to critic
+    workflow.add_conditional_edges(
+        "planner",
+        lambda state: END if state.get("run_status") == "planner_failed" else "executor",
+    )
     workflow.add_conditional_edges("executor", should_continue_executor)
     workflow.add_edge("tools", "executor")
-    
-    # Critic evaluates the draft, either ends or loops back to executor once
+    workflow.add_edge("synthesis", "critic")
     workflow.add_conditional_edges("critic", should_loop_critic)
-    
-    app = workflow.compile()
-    
-    return app
-
+    return workflow.compile()

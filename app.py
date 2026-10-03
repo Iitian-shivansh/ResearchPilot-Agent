@@ -31,6 +31,8 @@ if submitted:
         st.markdown("### Execution Trace")
         
         final_answer = ""
+        run_status = "running"
+        critic_status = "pending"
         
         try:
             # We will use st.status blocks for each major step
@@ -39,6 +41,8 @@ if submitted:
                     for node_name, state_update in event.items():
                         if state_update is None:
                             state_update = {}
+                        run_status = state_update.get("run_status", run_status)
+                        critic_status = state_update.get("critic_status", critic_status)
                             
                         if node_name == "planner":
                             with st.expander("📝 Planner: Generated Sub-tasks", expanded=True):
@@ -63,6 +67,9 @@ if submitted:
                             if messages and messages[-1].type == "human" and "Critic Feedback:" in str(messages[-1].content):
                                 with st.status("❌ Critic: Revision Requested", state="error"):
                                     st.write(messages[-1].content)
+                            elif critic_status == "unavailable":
+                                with st.status("⚠️ Critic: Unavailable", state="error"):
+                                    st.write("The draft is shown, but automated review did not complete.")
                             else:
                                 with st.status("✅ Critic: Approved!", state="complete"):
                                     st.write("The draft is complete and correctly cited.")
@@ -80,6 +87,10 @@ if submitted:
             st.markdown("---")
             st.markdown("### Final Answer")
             st.markdown(final_answer)
+            if run_status == "critic_unavailable":
+                st.warning("Review was unavailable. Treat this answer as unverified.")
+            elif run_status in {"planner_failed", "executor_failed", "synthesis_failed"}:
+                st.error(f"Research run ended with status: `{run_status}`")
             
         except Exception as e:
             error_msg = str(e)
@@ -92,4 +103,3 @@ if submitted:
             else:
                 st.error(f"❌ An error occurred: {error_msg}")
             st.info("💡 Tip: Try a simpler question, or check that your API keys are valid.")
-

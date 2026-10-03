@@ -16,6 +16,8 @@ The agent accepts a natural-language question, creates a short plan, uses the ap
 - Streamlit UI with expandable planner, tool-call, tool-output, draft, and critic traces.
 - CLI entry point for running the agent without Streamlit.
 - One critic-driven revision cycle and safeguards against unbounded tool loops.
+- Explicit run, critic, and citation statuses so failed verification is not shown as approval.
+- Structured tool-result envelopes with evidence identifiers for knowledge-base and calculation outputs.
 
 ## Architecture
 
@@ -43,11 +45,14 @@ The executor is configured with `qwen/qwen3.8-27b` through `langchain-groq`. Too
 |---|---|
 | `app.py` | Streamlit application |
 | `src/agent.py` | LangGraph workflow and retry/safeguard logic |
+| `src/contracts.py` | Structured tool results and evidence models |
 | `src/tools.py` | Tavily, Qdrant, and Python tools |
 | `src/sandbox.py` | Sandbox validation, limits, subprocess orchestration, and result parsing |
 | `src/_sandbox_worker.py` | Restricted worker process that executes generated Python |
 | `src/main.py` | CLI runner with a textual execution trace |
 | `tests/test_sandbox.py` | Sandbox and security tests |
+| `tests/test_agent.py` | Mocked planner, executor, synthesis, and critic graph tests |
+| `tests/test_contracts.py` | Tool-result and evidence contract tests |
 | `test_connections.py` | Optional Qdrant and Gemini connectivity checks |
 | `test_models.py` | Optional Groq model-list diagnostic |
 | `evaluate.py` | Runs the sample evaluation questions and rewrites `EVALUATION.md` |
@@ -99,8 +104,38 @@ The retrieval tool expects:
 - vector embeddings compatible with `models/gemini-embedding-001`
 - payload field `text` containing the indexed chunk
 - optional payload fields `document_id` and `chunk_index` for result labels
+- `source_hash` and `ingestion_run_id` for lifecycle tracking
 
-This repository currently contains the retrieval client but **does not contain a document-ingestion/indexing pipeline**. Populate the collection separately before testing knowledge-base questions.
+The repository includes a local document-ingestion command for `.txt` and `.md` files. It recursively scans a directory, normalizes and chunks text, creates or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point IDs. Before replacing a source, it deletes that source's previous chunks, preventing stale content from surviving after a file is edited. Re-running the command for unchanged files is safe.
+
+```bash
+python ingest.py ./knowledge_base
+```
+
+The command expects `QDRANT_URL`, `QDRANT_API_KEY`, and `GEMINI_API_KEY` in `.env`. Optional settings are available for collection name and chunking:
+
+```bash
+python ingest.py ./knowledge_base --collection documents --chunk-size 1200 --chunk-overlap 200 --batch-size 64
+```
+
+Each point contains the payload fields used by retrieval:
+
+- `text`: normalized document chunk
+- `document_id`: path relative to the ingested directory
+- `chunk_index`: zero-based chunk number
+
+PDF ingestion is intentionally not included yet; add a parser and its dependency only when PDF support is required.
+
+Retrieval can be tuned without code changes:
+
+```env
+KB_TOP_K=5
+KB_SCORE_THRESHOLD=0.0
+```
+
+`KB_TOP_K` limits the number of Qdrant results and `KB_SCORE_THRESHOLD` filters low-scoring
+matches. The retrieval tool returns structured evidence IDs such as `[KB-1]` with document,
+chunk, score, and excerpt metadata.
 
 ## Run the application
 
@@ -136,6 +171,24 @@ The sandbox tests do not require API keys or external services:
 python -m unittest tests.test_sandbox -v
 ```
 
+The agent graph also has deterministic tests with injected fake LLMs and tools:
+
+```bash
+python -m unittest tests.test_agent -v
+```
+
+The ingestion tests use fake embedding and Qdrant clients and do not require API keys:
+
+```bash
+python -m unittest tests.test_ingestion -v
+```
+
+Retrieval configuration and evidence formatting are covered by mocked tests:
+
+```bash
+python -m unittest tests.test_tools -v
+```
+
 If `pytest` is installed, the equivalent command is:
 
 ```bash
@@ -163,24 +216,36 @@ The worker additionally restricts builtins and imports, captures output, and ret
 
 This is a subprocess-based defense-in-depth sandbox, not a hardened container or VM. It does not provide seccomp, filesystem mount isolation, network namespaces, or multi-tenant isolation. See [`docs/SECURITY.md`](docs/SECURITY.md) before using it with untrusted workloads.
 
+## Phase one reliability work
+
+The agent graph now separates execution outcomes such as `completed`, `completed_after_revision`,
+`critic_unavailable`, `planner_failed`, `executor_failed`, and `synthesis_failed`. If the tool
+budget is exhausted, the graph runs a dedicated synthesis step instead of terminating on a tool
+call. Tool outputs use a stable JSON envelope and may include evidence IDs such as `[KB-1]` or
+`[CALC-1]`, which the critic checks before approval.
+
+This design is intentionally resume-friendly: the graph can be tested without API keys by
+injecting fake LLM/tool implementations, while production construction still uses Groq, Tavily,
+Gemini, and Qdrant.
+
 ## Known limitations
 
 - Groq free-tier rate limits can make requests slow or fail temporarily.
 - Tool-call formatting errors from the LLM are retried once with simplified instructions.
-- Knowledge-base retrieval depends on an externally populated Qdrant collection.
-- There is no automated ingestion pipeline yet.
-- Agent and Streamlit integration tests are not yet included.
+- Knowledge-base retrieval depends on Qdrant and Gemini credentials.
+- The ingestion pipeline currently supports `.txt` and `.md`; PDF parsing is not included.
+- Streamlit browser-level integration tests are not yet included.
 - Windows does not receive the Linux-only CPU and memory limits.
 - Citation checking in `evaluate.py` is heuristic rather than a formal correctness metric.
 
 ## Project status and next gaps
 
-The core agent, UI, integrations, sandbox, documentation, and sandbox test suite are implemented. The most useful next improvements are:
+The core agent, UI, integrations, sandbox, documentation, ingestion pipeline, structured evidence contracts, and mocked agent test suite are implemented. The most useful next improvements are:
 
-1. Add a repeatable document-ingestion pipeline for Qdrant.
-2. Add mocked tests for planner, executor, critic, tool routing, and error paths.
-3. Add Streamlit smoke/integration coverage.
-4. Improve structured citation extraction and evaluation.
+1. Add Streamlit smoke/integration coverage.
+2. Improve citation extraction and evaluation beyond heuristics.
+3. Add optional PDF ingestion.
+4. Add task-scoped attachments without mixing them into the shared collection.
 5. Consider container-based execution for stronger isolation in production.
 
 ## License

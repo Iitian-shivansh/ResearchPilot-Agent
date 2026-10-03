@@ -1,16 +1,41 @@
 """
 Tool definitions for the LangGraph agent.
 """
-import json
 import logging
 import os
-from langchain_tavily import TavilySearch
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from src.sandbox import run_code_in_subprocess, SandboxConfig
+from src.contracts import Evidence, ToolResult
+from src.sandbox import run_code_in_subprocess
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_KB_LIMIT = 5
+DEFAULT_KB_SCORE_THRESHOLD = 0.0
+MAX_KB_RESULT_CHARS = 1200
+
+
+def _knowledge_base_limit() -> int:
+    try:
+        return max(1, int(os.getenv("KB_TOP_K", DEFAULT_KB_LIMIT)))
+    except ValueError:
+        logger.warning("Invalid KB_TOP_K; using %d", DEFAULT_KB_LIMIT)
+        return DEFAULT_KB_LIMIT
+
+
+def _knowledge_base_threshold() -> float:
+    try:
+        return max(0.0, min(1.0, float(os.getenv(
+            "KB_SCORE_THRESHOLD", DEFAULT_KB_SCORE_THRESHOLD
+        ))))
+    except ValueError:
+        logger.warning(
+            "Invalid KB_SCORE_THRESHOLD; using %.2f",
+            DEFAULT_KB_SCORE_THRESHOLD,
+        )
+        return DEFAULT_KB_SCORE_THRESHOLD
+
 
 @tool
 def query_knowledge_base(query: str) -> str:
@@ -33,16 +58,21 @@ def query_knowledge_base(query: str) -> str:
         results = client.query_points(
             collection_name="documents",
             query=query_vector,
-            limit=5,
-            with_payload=True
+            limit=_knowledge_base_limit(),
+            score_threshold=_knowledge_base_threshold(),
+            with_payload=True,
         )
         
         # Format results
         if not results.points:
-            return "No relevant information found in the knowledge base."
+            return ToolResult(
+                ok=True,
+                tool_name="query_knowledge_base",
+                data={"message": "No relevant information found in the knowledge base."},
+            ).to_json()
             
         formatted_results = []
-        MAX_TOTAL_CHARS = 1200 # Keep well within Groq's 6000 TPM limit and JSON formatting limits
+        evidence_points = []
         current_chars = 0
         
         for point in results.points:
@@ -53,21 +83,45 @@ def query_knowledge_base(query: str) -> str:
                 text += "... [truncated]"
                 
             doc_id = payload.get("document_id", "Unknown")
-            page = payload.get("chunk_index", 0)
+            chunk_index = payload.get("chunk_index", 0)
             score = point.score
             
-            chunk_str = f"[Doc: {doc_id} | Page: {page} | Score: {score:.3f}]\n{text}"
+            chunk_str = (
+                f"[Evidence: KB-{len(formatted_results) + 1} | Doc: {doc_id} | "
+                f"Chunk: {chunk_index} | Score: {score:.3f}]\n{text}"
+            )
             
-            if current_chars + len(chunk_str) > MAX_TOTAL_CHARS:
+            if current_chars + len(chunk_str) > MAX_KB_RESULT_CHARS:
                 formatted_results.append("[Remaining results truncated to fit token limits]")
                 break
                 
             formatted_results.append(chunk_str)
+            evidence_points.append(point)
             current_chars += len(chunk_str)
             
-        return "\n\n---\n\n".join(formatted_results)
+        return ToolResult(
+            ok=True,
+            tool_name="query_knowledge_base",
+            data={"results": "\n\n---\n\n".join(formatted_results)},
+            evidence=tuple(
+                Evidence(
+                    evidence_id=f"KB-{index}",
+                    source_type="knowledge_base",
+                    source_id=str((point.payload or {}).get("document_id", "Unknown")),
+                    excerpt=str((point.payload or {}).get("text", ""))[:500],
+                    score=point.score,
+                )
+                for index, point in enumerate(evidence_points, start=1)
+            ),
+        ).to_json()
     except Exception as e:
-        return f"Error querying knowledge base: {e}"
+        logger.exception("Knowledge-base query failed")
+        return ToolResult(
+            ok=False,
+            tool_name="query_knowledge_base",
+            error_type=type(e).__name__,
+            error_message=str(e),
+        ).to_json()
 
 @tool
 def execute_python(code: str) -> str:
@@ -97,18 +151,32 @@ def execute_python(code: str) -> str:
     # Convert structured result back to string for LangGraph compatibility.
     # The agent expects a plain string return — same interface as before.
     if result.success:
-        if not result.stdout.strip():
-            return "Code executed successfully, but no output was printed."
-        return result.stdout
+        return ToolResult(
+            ok=True,
+            tool_name="execute_python",
+            data={"stdout": result.stdout or "", "printed": bool(result.stdout.strip())},
+            evidence=(
+                Evidence(
+                    evidence_id="CALC-1",
+                    source_type="calculation",
+                    source_id="execute_python",
+                    excerpt=result.stdout[:1000],
+                ),
+            ),
+        ).to_json()
     else:
-        # Return the error in a format consistent with the old implementation
-        # so the Executor/Critic can interpret it the same way.
-        error_msg = result.stderr or f"Execution failed: {result.error_type}"
-        return f"Execution error: {error_msg}"
+        return ToolResult(
+            ok=False,
+            tool_name="execute_python",
+            error_type=result.error_type,
+            error_message=result.stderr or "Execution failed without an error message",
+        ).to_json()
 
 def get_tools():
     """
     Returns a list of tools available for the agent.
     """
+    from langchain_tavily import TavilySearch
+
     search_tool = TavilySearch(max_results=3)
     return [search_tool, query_knowledge_base, execute_python]

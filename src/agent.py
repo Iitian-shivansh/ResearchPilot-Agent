@@ -19,6 +19,18 @@ from src.modes import get_mode
 MAX_TOOL_ROUNDS = 4
 MAX_TOOL_ERRORS = 2
 RATE_LIMIT_RETRY_DELAY = 5
+FAST_QUERY_MAX_CHARS = 120
+FAST_QUERY_MARKERS = (
+    "research",
+    "compare",
+    "analyze",
+    "latest",
+    "according to",
+    "knowledge base",
+    "source",
+    "cite",
+    "attachment",
+)
 
 
 class AgentState(TypedDict):
@@ -28,6 +40,7 @@ class AgentState(TypedDict):
     run_status: NotRequired[str]
     critic_status: NotRequired[str]
     citation_status: NotRequired[str]
+    fast_path: NotRequired[bool]
     mode: NotRequired[str]
     context: NotRequired[str]
     trace: NotRequired[Annotated[list[dict[str, str]], operator.add]]
@@ -44,6 +57,15 @@ def _latest_user_query(messages: list[AnyMessage]) -> str:
 
 def _trace(node: str, status: str) -> dict[str, str]:
     return {"node": node, "status": status}
+
+
+def is_fast_query(query: str) -> bool:
+    """Identify short conversational questions that do not need research tools."""
+
+    normalized = " ".join(query.split()).lower()
+    if not normalized or len(normalized) > FAST_QUERY_MAX_CHARS:
+        return False
+    return not any(marker in normalized for marker in FAST_QUERY_MARKERS)
 
 
 def _is_rate_limit(error: Exception) -> bool:
@@ -125,6 +147,7 @@ def create_agent_graph(
                     "messages": [AIMessage(content="The research plan could not be created.")],
                     "trace": [_trace("planner", "failed")],
                 }
+
             time.sleep(rate_limit_delay)
             try:
                 response = llm.invoke([sys_msg, HumanMessage(content=query)])
@@ -141,6 +164,35 @@ def create_agent_graph(
             "revision_count": 0,
             "run_status": "planned",
             "trace": [_trace("planner", "completed")],
+        }
+
+    def fast_answer_node(state: AgentState):
+        """Answer a simple conversational question with one model call."""
+
+        try:
+            response = llm.invoke(
+                [
+                    SystemMessage(
+                        content=(
+                            "Answer the user's simple question directly and concisely. "
+                            "Do not call tools, explain the workflow, or invent sources."
+                        )
+                    ),
+                    HumanMessage(content=_latest_user_query(state["messages"])),
+                ]
+            )
+        except Exception as error:
+            return {
+                "run_status": "fast_path_failed",
+                "messages": [AIMessage(content=f"Fast answer failed: {type(error).__name__}")],
+                "trace": [_trace("fast_answer", "failed")],
+            }
+        return {
+            "messages": [response],
+            "run_status": "fast_completed",
+            "critic_status": "skipped",
+            "citation_status": "not_required",
+            "trace": [_trace("fast_answer", "completed")],
         }
 
     def executor_node(state: AgentState):
@@ -324,12 +376,21 @@ def create_agent_graph(
         return END
 
     workflow = StateGraph(AgentState)
+    workflow.add_node("fast_answer", fast_answer_node)
     workflow.add_node("planner", planner_node)
     workflow.add_node("executor", executor_node)
     workflow.add_node("synthesis", synthesis_node)
     workflow.add_node("tools", ToolNode(tools))
     workflow.add_node("critic", critic_node)
-    workflow.add_edge(START, "planner")
+    workflow.add_conditional_edges(
+        START,
+        lambda state: (
+            "fast_answer"
+            if state.get("fast_path") and is_fast_query(_latest_user_query(state["messages"]))
+            else "planner"
+        ),
+    )
+    workflow.add_edge("fast_answer", END)
     workflow.add_conditional_edges(
         "planner",
         lambda state: END if state.get("run_status") == "planner_failed" else "executor",

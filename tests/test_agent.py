@@ -6,7 +6,7 @@ from unittest import TestCase
 from langchain_core.messages import AIMessage
 from langchain_core.tools import tool
 
-from src.agent import create_agent_graph
+from src.agent import create_agent_graph, is_fast_query
 
 
 class FakeLLM:
@@ -52,6 +52,24 @@ def fake_research(query: str) -> str:
 
 
 class TestAgentGraph(TestCase):
+    def test_fast_query_uses_one_direct_model_call(self):
+        llm = FakeLLM([AIMessage(content="Paris.")])
+        state = create_agent_graph(
+            llm=llm, tools=[fake_research], rate_limit_delay=0
+        ).invoke(
+            {
+                "messages": [{"role": "user", "content": "What is the capital of France?"}],
+                "fast_path": True,
+            }
+        )
+        self.assertEqual(state["run_status"], "fast_completed")
+        self.assertEqual(len(llm.calls), 1)
+        self.assertEqual(state["critic_status"], "skipped")
+
+    def test_research_markers_disable_fast_path(self):
+        self.assertFalse(is_fast_query("Research the latest result"))
+        self.assertTrue(is_fast_query("What is 2 plus 2?"))
+
     def test_direct_answer_is_critic_approved(self):
         llm = FakeLLM(
             [

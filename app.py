@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.agent import create_agent_graph
+from src.agent import is_fast_query
 from src.attachments import attachment_context, load_task_attachments
 from src.modes import MODES
 from src.report import build_markdown_report
@@ -79,6 +80,7 @@ if submission:
                     "messages": messages,
                     "mode": mode,
                     "context": attachment_context(attachments),
+                    "fast_path": not attachments and is_fast_query(query),
                 }
             ):
                 for node_name, update in event.items():

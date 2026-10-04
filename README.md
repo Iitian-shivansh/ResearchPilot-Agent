@@ -21,6 +21,8 @@ The agent accepts a natural-language question, creates a short plan, uses the ap
 - Task-scoped `.txt` and `.md` attachments with bounded size/count validation; attachments are temporary prompt context and are never inserted into shared Qdrant.
 - Follow-up conversation state in Streamlit, with Quick, Deep, Compare, and Analyze research modes.
 - Per-node execution progress and downloadable Markdown reports.
+- A low-latency fast path for short conversational questions that do not require research,
+  using one model call and skipping planning, tools, and critic review.
 
 ## Architecture
 
@@ -171,6 +173,10 @@ mode (Quick, Deep, Compare, or Analyze) in the sidebar. Attach up to five UTF-8 
 that task and are not persisted or indexed in Qdrant. The last result can be exported as a
 Markdown report containing the question, mode, answer, attachment names, and execution trace.
 PDF attachments are intentionally not supported in this phase.
+
+Short questions without research terms or attachments use a direct one-call response path.
+Questions involving research, comparisons, current information, sources, or attachments
+continue through the full planner-executor-tools-critic workflow.
 
 ## Run from the CLI
 

@@ -21,6 +21,8 @@ The agent accepts a natural-language question, creates a short plan, uses the ap
 - Task-scoped `.txt` and `.md` attachments with bounded size/count validation; attachments are temporary prompt context and are never inserted into shared Qdrant.
 - Follow-up conversation state in Streamlit, with Quick, Deep, Compare, and Analyze research modes.
 - Per-node execution progress and downloadable Markdown reports.
+- A low-latency fast path for short conversational questions that do not require research,
+  using one model call and skipping planning, tools, and critic review.
 
 ## Architecture
 
@@ -172,6 +174,10 @@ that task and are not persisted or indexed in Qdrant. The last result can be exp
 Markdown report containing the question, mode, answer, attachment names, and execution trace.
 PDF attachments are intentionally not supported in this phase.
 
+Short questions without research terms or attachments use a direct one-call response path.
+Questions involving research, comparisons, current information, sources, or attachments
+continue through the full planner-executor-tools-critic workflow.
+
 ## Run from the CLI
 
 With the virtual environment active:
@@ -220,7 +226,18 @@ Run the optional live evaluation only after configuring all services:
 python evaluate.py
 ```
 
-The evaluation script makes multiple LLM/tool calls, sleeps between questions to reduce rate-limit pressure, and rewrites `EVALUATION.md` with its results. The current checked-in evaluation records successful runs for five sample questions, with critic revisions on some complex questions.
+The live evaluation makes multiple LLM/tool calls, sleeps between questions to reduce
+rate-limit pressure, and rewrites `EVALUATION.md`. For deterministic CI/local checks that
+require no API keys or network access, run:
+
+```bash
+python evaluate.py --offline
+```
+
+The offline evaluator validates graph status and structured evidence integrity, writes a
+reviewable `EVALUATION.md`, and exits non-zero for contract violations. Its synthetic cases
+are intentionally not a measure of model quality; use the live evaluation and human review
+for that.
 
 ## Sandbox security
 

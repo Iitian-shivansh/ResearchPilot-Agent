@@ -1,105 +1,142 @@
-import os
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
 from src.agent import create_agent_graph
+from src.attachments import attachment_context, load_task_attachments
+from src.modes import MODES
+from src.report import build_markdown_report
 
 load_dotenv()
 
-st.set_page_config(page_title="Research Agent", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="Research Agent", page_icon=":material/auto_awesome:", layout="centered")
+st.session_state.setdefault("conversation", [])
+st.session_state.setdefault("last_result", None)
 
-st.title("Research Agent (Plan & Execute)")
-st.write("Ask complex questions. The agent will plan, execute tools, and self-correct.")
+st.title("Research Agent")
+st.caption("Plan, execute, review, and continue a research conversation.")
 
-with st.form("query_form"):
-    query = st.text_input("Enter your research question:")
-    submitted = st.form_submit_button("Run Agent")
+with st.sidebar:
+    st.header("Research settings")
+    mode = st.selectbox("Research mode", list(MODES), index=1, key="research_mode")
+    st.caption(MODES[mode].instruction)
+    st.info("Attachments are temporary task context. They are not written to or inserted into Qdrant.")
 
-if submitted:
+for turn in st.session_state.conversation:
+    with st.chat_message(turn["role"]):
+        st.markdown(turn["content"])
+
+submission = st.chat_input(
+    "Ask a research question or follow up...",
+    accept_file="multiple",
+    file_type=["txt", "md"],
+)
+
+
+def _submission_text(value) -> str:
+    return str(getattr(value, "text", "") or "").strip()
+
+
+if submission:
+    query = _submission_text(submission)
+    files = list(getattr(submission, "files", ()) or ())
     if not query:
-        st.warning("Please enter a question.")
-    else:
+        st.error("Enter a research question before submitting.")
+        st.stop()
+
+    try:
+        attachments = load_task_attachments(files)
+    except ValueError as error:
+        st.error(str(error))
+        st.stop()
+
+    st.session_state.conversation.append({"role": "user", "content": query})
+    with st.chat_message("user"):
+        st.markdown(query)
+        if attachments:
+            st.caption("Task context: " + ", ".join(item.name for item in attachments))
+
+    try:
+        graph = create_agent_graph()
+    except Exception as error:
+        st.error(f"Failed to initialize the agent: {error}")
+        st.stop()
+
+    messages = []
+    for turn in st.session_state.conversation:
+        message_type = HumanMessage if turn["role"] == "user" else AIMessage
+        messages.append(message_type(content=turn["content"]))
+
+    trace = []
+    final_answer = ""
+    run_status = "running"
+    critic_status = "pending"
+    with st.chat_message("assistant"):
+        status = st.status("Running research workflow", expanded=True)
         try:
-            app = create_agent_graph()
-        except Exception as e:
-            st.error(f"❌ Failed to initialize the agent: {e}")
-            st.info("Make sure your API keys are correctly set in the `.env` file.")
+            for event in graph.stream(
+                {
+                    "messages": messages,
+                    "mode": mode,
+                    "context": attachment_context(attachments),
+                }
+            ):
+                for node_name, update in event.items():
+                    update = update or {}
+                    run_status = update.get("run_status", run_status)
+                    critic_status = update.get("critic_status", critic_status)
+                    trace.extend(update.get("trace", []))
+                    status.write(f"{node_name}: {run_status}")
+
+                    if node_name == "executor":
+                        for message in update.get("messages", []):
+                            if isinstance(message, AIMessage) and not message.tool_calls and message.content:
+                                final_answer = str(message.content)
+                    elif node_name == "synthesis":
+                        for message in update.get("messages", []):
+                            if isinstance(message, AIMessage) and message.content:
+                                final_answer = str(message.content)
+                    elif node_name == "tools":
+                        for message in update.get("messages", []):
+                            if isinstance(message, ToolMessage):
+                                status.write(f"tool completed: {message.name}")
+            status.update(label=f"Research {run_status}", state="complete")
+        except Exception as error:
+            status.update(label="Research failed", state="error")
+            st.error(f"Research run failed: {error}")
             st.stop()
-        
-        initial_state = {"messages": [HumanMessage(content=query)]}
-        
-        st.markdown("### Execution Trace")
-        
-        final_answer = ""
-        run_status = "running"
-        critic_status = "pending"
-        
-        try:
-            # We will use st.status blocks for each major step
-            with st.spinner("🔄 Agent is thinking... This may take a minute on Groq's free tier."):
-                for event in app.stream(initial_state):
-                    for node_name, state_update in event.items():
-                        if state_update is None:
-                            state_update = {}
-                        run_status = state_update.get("run_status", run_status)
-                        critic_status = state_update.get("critic_status", critic_status)
-                            
-                        if node_name == "planner":
-                            with st.expander("📝 Planner: Generated Sub-tasks", expanded=True):
-                                st.markdown(state_update.get("plan", "No plan generated."))
-                                
-                        elif node_name == "executor":
-                            messages = state_update.get("messages", [])
-                            for msg in messages:
-                                if isinstance(msg, AIMessage):
-                                    if msg.tool_calls:
-                                        with st.expander("🛠️ Executor: Tool Calls", expanded=False):
-                                            for tool_call in msg.tool_calls:
-                                                st.write(f"**Tool:** `{tool_call['name']}`")
-                                                st.write(f"**Args:** `{tool_call['args']}`")
-                                    else:
-                                        with st.expander("✍️ Executor: Draft Answer", expanded=False):
-                                            st.markdown(msg.content)
-                                            final_answer = msg.content
-                                            
-                        elif node_name == "critic":
-                            messages = state_update.get("messages", [])
-                            if messages and messages[-1].type == "human" and "Critic Feedback:" in str(messages[-1].content):
-                                with st.status("❌ Critic: Revision Requested", state="error"):
-                                    st.write(messages[-1].content)
-                            elif critic_status == "unavailable":
-                                with st.status("⚠️ Critic: Unavailable", state="error"):
-                                    st.write("The draft is shown, but automated review did not complete.")
-                            else:
-                                with st.status("✅ Critic: Approved!", state="complete"):
-                                    st.write("The draft is complete and correctly cited.")
-                                    
-                        elif node_name == "tools":
-                            messages = state_update.get("messages", [])
-                            for msg in messages:
-                                if isinstance(msg, ToolMessage):
-                                    with st.expander(f"📥 Tool Output: {msg.name}", expanded=False):
-                                        content = str(msg.content)
-                                        if len(content) > 500:
-                                            content = content[:500] + "\n\n... [truncated]"
-                                        st.text(content)
-            
-            st.markdown("---")
-            st.markdown("### Final Answer")
+
+        if final_answer:
             st.markdown(final_answer)
-            if run_status == "critic_unavailable":
-                st.warning("Review was unavailable. Treat this answer as unverified.")
-            elif run_status in {"planner_failed", "executor_failed", "synthesis_failed"}:
-                st.error(f"Research run ended with status: `{run_status}`")
-            
-        except Exception as e:
-            error_msg = str(e)
-            if "429" in error_msg or "rate" in error_msg.lower():
-                st.error("⏳ Rate limit hit on Groq's free tier. Please wait 60 seconds and try again.")
-            elif "400" in error_msg or "BadRequest" in error_msg:
-                st.error("⚠️ The LLM returned a formatting error. Try rephrasing your question more concisely.")
-            elif "401" in error_msg or "auth" in error_msg.lower():
-                st.error("🔑 Authentication failed. Check your GROQ_API_KEY in the `.env` file.")
-            else:
-                st.error(f"❌ An error occurred: {error_msg}")
-            st.info("💡 Tip: Try a simpler question, or check that your API keys are valid.")
+        if critic_status == "unavailable":
+            st.warning("Automated review was unavailable; treat this answer as unverified.")
+        elif run_status in {"planner_failed", "executor_failed", "synthesis_failed"}:
+            st.error(f"Research ended with status: `{run_status}`")
+
+    if final_answer:
+        st.session_state.conversation.append({"role": "assistant", "content": final_answer})
+    st.session_state.last_result = {
+        "query": query,
+        "answer": final_answer,
+        "mode": mode,
+        "trace": trace,
+        "attachments": [item.name for item in attachments],
+    }
+    st.rerun()
+
+if st.session_state.last_result:
+    result = st.session_state.last_result
+    report = build_markdown_report(
+        result["query"],
+        result["answer"],
+        result["mode"],
+        result["trace"],
+        result["attachments"],
+    )
+    st.download_button(
+        "Download Markdown report",
+        data=report,
+        file_name="research-report.md",
+        mime="text/markdown",
+        icon=":material/download:",
+    )

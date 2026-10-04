@@ -3,7 +3,9 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+import sys
 from unittest import TestCase
+from unittest.mock import patch
 
 from src.ingestion import (
     IngestionConfig,
@@ -11,6 +13,7 @@ from src.ingestion import (
     discover_documents,
     ingest_directory,
 )
+from src.ingestion import MAX_DOCUMENT_BYTES, _read_document
 
 
 class FakeEmbeddings:
@@ -63,12 +66,31 @@ class TestIngestion(TestCase):
             (root / "z.md").write_text("z", encoding="utf-8")
             (root / "nested").mkdir()
             (root / "nested" / "a.TXT").write_text("a", encoding="utf-8")
-            (root / "ignored.pdf").write_text("ignored", encoding="utf-8")
+            (root / "paper.pdf").write_bytes(b"%PDF")
 
             self.assertEqual(
                 [path.relative_to(root).as_posix() for path in discover_documents(root)],
-                ["nested/a.TXT", "z.md"],
+                ["nested/a.TXT", "paper.pdf", "z.md"],
             )
+
+    def test_pdf_text_is_extracted_without_embedding_the_binary(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "paper.pdf"
+            path.write_bytes(b"%PDF")
+            page = SimpleNamespace(extract_text=lambda: "Extracted research text")
+            fake_reader = SimpleNamespace(pages=[page])
+            fake_pypdf = SimpleNamespace(PdfReader=lambda path, strict=False: fake_reader)
+            with patch.dict(sys.modules, {"pypdf": fake_pypdf}):
+                self.assertEqual(_read_document(path), "Extracted research text")
+
+    def test_oversized_documents_are_rejected(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "large.pdf"
+            path.write_bytes(b"x")
+            with patch.object(Path, "stat") as stat:
+                stat.return_value.st_size = MAX_DOCUMENT_BYTES + 1
+                with self.assertRaisesRegex(ValueError, "exceeds"):
+                    _read_document(path)
 
     def test_ingest_creates_collection_and_uploads_expected_payloads(self):
         with TemporaryDirectory() as directory:

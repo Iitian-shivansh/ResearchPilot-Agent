@@ -18,6 +18,9 @@ The agent accepts a natural-language question, creates a short plan, uses the ap
 - One critic-driven revision cycle and safeguards against unbounded tool loops.
 - Explicit run, critic, and citation statuses so failed verification is not shown as approval.
 - Structured tool-result envelopes with evidence identifiers for knowledge-base and calculation outputs.
+- Task-scoped `.txt` and `.md` attachments with bounded size/count validation; attachments are temporary prompt context and are never inserted into shared Qdrant.
+- Follow-up conversation state in Streamlit, with Quick, Deep, Compare, and Analyze research modes.
+- Per-node execution progress and downloadable Markdown reports.
 
 ## Architecture
 
@@ -43,13 +46,16 @@ The executor is configured with `qwen/qwen3.8-27b` through `langchain-groq`. Too
 
 | Path | Purpose |
 |---|---|
-| `app.py` | Streamlit application |
+| `app.py` | Streamlit application with follow-up chat, task attachments, modes, progress, and Markdown export |
 | `src/agent.py` | LangGraph workflow and retry/safeguard logic |
 | `src/contracts.py` | Structured tool results and evidence models |
 | `src/tools.py` | Tavily, Qdrant, and Python tools |
 | `src/sandbox.py` | Sandbox validation, limits, subprocess orchestration, and result parsing |
 | `src/_sandbox_worker.py` | Restricted worker process that executes generated Python |
 | `src/main.py` | CLI runner with a textual execution trace |
+| `src/attachments.py` | Bounded validation and formatting of temporary task attachments |
+| `src/modes.py` | Research mode instructions and tool-budget defaults |
+| `src/report.py` | Markdown report export |
 | `tests/test_sandbox.py` | Sandbox and security tests |
 | `tests/test_agent.py` | Mocked planner, executor, synthesis, and critic graph tests |
 | `tests/test_contracts.py` | Tool-result and evidence contract tests |
@@ -106,7 +112,12 @@ The retrieval tool expects:
 - optional payload fields `document_id` and `chunk_index` for result labels
 - `source_hash` and `ingestion_run_id` for lifecycle tracking
 
-The repository includes a local document-ingestion command for `.txt` and `.md` files. It recursively scans a directory, normalizes and chunks text, creates or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point IDs. Before replacing a source, it deletes that source's previous chunks, preventing stale content from surviving after a file is edited. Re-running the command for unchanged files is safe.
+The repository includes a local document-ingestion command for `.txt`, `.md`, and text-based
+`.pdf` files. It recursively scans a directory, extracts, normalizes, and chunks text, creates
+or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point
+IDs. Documents are limited to 10 MB each. Before replacing a source, it deletes that source's
+previous chunks, preventing stale content from surviving after a file is edited. Re-running the
+command for unchanged files is safe.
 
 ```bash
 python ingest.py ./knowledge_base
@@ -124,7 +135,8 @@ Each point contains the payload fields used by retrieval:
 - `document_id`: path relative to the ingested directory
 - `chunk_index`: zero-based chunk number
 
-PDF ingestion is intentionally not included yet; add a parser and its dependency only when PDF support is required.
+PDF support uses `pypdf` and extracts text only; scanned/image-only PDFs may produce no usable
+text and are rejected if the complete ingestion contains no non-whitespace chunks.
 
 Retrieval can be tuned without code changes:
 
@@ -152,6 +164,13 @@ start.bat
 ```
 
 The UI displays the plan, tool calls, tool outputs, draft answer, critic result, and final answer. A query can take a minute on free-tier LLM limits.
+
+The Streamlit UI supports follow-up questions in the same browser session. Choose a research
+mode (Quick, Deep, Compare, or Analyze) in the sidebar. Attach up to five UTF-8 `.txt` or
+`.md` files (1 MB each, 4 MB total); their contents are supplied only as temporary context for
+that task and are not persisted or indexed in Qdrant. The last result can be exported as a
+Markdown report containing the question, mode, answer, attachment names, and execution trace.
+PDF attachments are intentionally not supported in this phase.
 
 ## Run from the CLI
 
@@ -233,8 +252,8 @@ Gemini, and Qdrant.
 - Groq free-tier rate limits can make requests slow or fail temporarily.
 - Tool-call formatting errors from the LLM are retried once with simplified instructions.
 - Knowledge-base retrieval depends on Qdrant and Gemini credentials.
-- The ingestion pipeline currently supports `.txt` and `.md`; PDF parsing is not included.
-- Streamlit browser-level integration tests are not yet included.
+- PDF ingestion extracts text but does not perform OCR; image-only PDFs are unsupported.
+- Streamlit browser-level integration tests are not yet included; attachment validation and report generation have deterministic unit coverage.
 - Windows does not receive the Linux-only CPU and memory limits.
 - Citation checking in `evaluate.py` is heuristic rather than a formal correctness metric.
 
@@ -244,8 +263,8 @@ The core agent, UI, integrations, sandbox, documentation, ingestion pipeline, st
 
 1. Add Streamlit smoke/integration coverage.
 2. Improve citation extraction and evaluation beyond heuristics.
-3. Add optional PDF ingestion.
-4. Add task-scoped attachments without mixing them into the shared collection.
+3. Add Streamlit smoke/integration coverage.
+4. Improve citation extraction and evaluation beyond heuristics.
 5. Consider container-based execution for stronger isolation in production.
 
 ## License

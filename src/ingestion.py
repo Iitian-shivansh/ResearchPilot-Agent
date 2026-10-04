@@ -23,7 +23,8 @@ from qdrant_client.models import (
 logger = logging.getLogger(__name__)
 
 
-SUPPORTED_EXTENSIONS = frozenset({".txt", ".md"})
+SUPPORTED_EXTENSIONS = frozenset({".txt", ".md", ".pdf"})
+MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 DEFAULT_COLLECTION_NAME = "documents"
 DEFAULT_CHUNK_SIZE = 1200
 DEFAULT_CHUNK_OVERLAP = 200
@@ -82,6 +83,31 @@ def discover_documents(input_path: str | Path) -> list[Path]:
             f"Supported extensions: {', '.join(sorted(SUPPORTED_EXTENSIONS))}"
         )
     return documents
+
+
+def _read_document(path: Path) -> str:
+    """Read a supported document with an explicit size limit."""
+
+    size = path.stat().st_size
+    if size > MAX_DOCUMENT_BYTES:
+        raise ValueError(
+            f"Document '{path.name}' exceeds the {MAX_DOCUMENT_BYTES // (1024 * 1024)} MB limit"
+        )
+    if path.suffix.lower() != ".pdf":
+        return path.read_text(encoding="utf-8")
+
+    try:
+        from pypdf import PdfReader
+    except ImportError as error:
+        raise RuntimeError(
+            "PDF ingestion requires the 'pypdf' package; install requirements.txt"
+        ) from error
+    try:
+        reader = PdfReader(str(path), strict=False)
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as error:
+        raise ValueError(f"Could not extract text from PDF '{path.name}': {error}") from error
+    return text
 
 
 def chunk_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
@@ -216,7 +242,7 @@ def ingest_directory(
     chunks: list[tuple[str, int, str, str]] = []
     for path in documents:
         document_id = _document_id(path, root)
-        text = path.read_text(encoding="utf-8")
+        text = _read_document(path)
         source_hash = _source_hash(text)
         chunks.extend(
             (document_id, index, chunk, source_hash)

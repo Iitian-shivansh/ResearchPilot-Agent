@@ -12,7 +12,7 @@ from src.ingestion import IngestionConfig, create_clients, ingest_directory
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Ingest .txt and .md files into the ResearchPilot Qdrant collection."
+        description="Ingest .txt, .md, and text-based PDF files into the ResearchPilot Qdrant collection."
     )
     parser.add_argument("input_path", help="A document file or directory to ingest")
     parser.add_argument(

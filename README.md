@@ -112,7 +112,12 @@ The retrieval tool expects:
 - optional payload fields `document_id` and `chunk_index` for result labels
 - `source_hash` and `ingestion_run_id` for lifecycle tracking
 
-The repository includes a local document-ingestion command for `.txt` and `.md` files. It recursively scans a directory, normalizes and chunks text, creates or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point IDs. Before replacing a source, it deletes that source's previous chunks, preventing stale content from surviving after a file is edited. Re-running the command for unchanged files is safe.
+The repository includes a local document-ingestion command for `.txt`, `.md`, and text-based
+`.pdf` files. It recursively scans a directory, extracts, normalizes, and chunks text, creates
+or validates the collection, generates Gemini embeddings, and upserts deterministic Qdrant point
+IDs. Documents are limited to 10 MB each. Before replacing a source, it deletes that source's
+previous chunks, preventing stale content from surviving after a file is edited. Re-running the
+command for unchanged files is safe.
 
 ```bash
 python ingest.py ./knowledge_base
@@ -130,7 +135,8 @@ Each point contains the payload fields used by retrieval:
 - `document_id`: path relative to the ingested directory
 - `chunk_index`: zero-based chunk number
 
-PDF ingestion is intentionally not included yet; add a parser and its dependency only when PDF support is required.
+PDF support uses `pypdf` and extracts text only; scanned/image-only PDFs may produce no usable
+text and are rejected if the complete ingestion contains no non-whitespace chunks.
 
 Retrieval can be tuned without code changes:
 
@@ -246,7 +252,7 @@ Gemini, and Qdrant.
 - Groq free-tier rate limits can make requests slow or fail temporarily.
 - Tool-call formatting errors from the LLM are retried once with simplified instructions.
 - Knowledge-base retrieval depends on Qdrant and Gemini credentials.
-- The ingestion pipeline currently supports `.txt` and `.md`; PDF parsing is not included.
+- PDF ingestion extracts text but does not perform OCR; image-only PDFs are unsupported.
 - Streamlit browser-level integration tests are not yet included; attachment validation and report generation have deterministic unit coverage.
 - Windows does not receive the Linux-only CPU and memory limits.
 - Citation checking in `evaluate.py` is heuristic rather than a formal correctness metric.
@@ -257,8 +263,9 @@ The core agent, UI, integrations, sandbox, documentation, ingestion pipeline, st
 
 1. Add Streamlit smoke/integration coverage.
 2. Improve citation extraction and evaluation beyond heuristics.
-3. Add optional PDF ingestion.
-4. Consider container-based execution for stronger isolation in production.
+3. Add Streamlit smoke/integration coverage.
+4. Improve citation extraction and evaluation beyond heuristics.
+5. Consider container-based execution for stronger isolation in production.
 
 ## License
 

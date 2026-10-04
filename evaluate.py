@@ -1,8 +1,61 @@
+import json
 import os
 import time
+import argparse
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from src.agent import create_agent_graph
+from src.evaluation import EvaluationCase, evaluate_state, render_evaluation_markdown
+
+OFFLINE_CASES = (
+    EvaluationCase("direct-answer", "Answer a simple factual question."),
+    EvaluationCase(
+        "grounded-answer",
+        "Answer using retrieved evidence.",
+        expected_evidence_ids=("[WEB-1]",),
+    ),
+    EvaluationCase("quick-mode", "Give a concise answer.", mode="Quick"),
+)
+
+
+def run_offline_evaluation() -> int:
+    """Run contract-level checks without API keys or network access."""
+
+    synthetic_states = (
+        {"run_status": "completed", "messages": [
+            AIMessage(content="A direct answer.", tool_calls=[])
+        ]},
+        {"run_status": "completed", "messages": [
+            ToolMessage(
+                name="research",
+                tool_call_id="offline-1",
+                content=json.dumps({
+                    "ok": True,
+                    "tool_name": "research",
+                    "evidence": [{
+                        "evidence_id": "WEB-1",
+                        "source_type": "web",
+                        "source_id": "offline",
+                    }],
+                }),
+            ),
+            AIMessage(content="Supported claim [WEB-1].", tool_calls=[]),
+        ]},
+        {"run_status": "completed", "messages": [
+            AIMessage(content="A concise answer.", tool_calls=[])
+        ]},
+    )
+    results = [
+        evaluate_state(state, case)
+        for case, state in zip(OFFLINE_CASES, synthetic_states)
+    ]
+    with open("EVALUATION.md", "w", encoding="utf-8") as handle:
+        handle.write(render_evaluation_markdown(results))
+    with open("evaluation-results.json", "w", encoding="utf-8") as handle:
+        json.dump(results, handle, indent=2, ensure_ascii=False)
+    print(render_evaluation_markdown(results))
+    return 0 if all(result["passed"] for result in results) else 1
+
 
 def run_evaluation():
     load_dotenv()
@@ -86,4 +139,11 @@ def run_evaluation():
     print("\nWrote EVALUATION.md")
 
 if __name__ == "__main__":
-    run_evaluation()
+    parser = argparse.ArgumentParser(description="Run ResearchPilot evaluation.")
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Run deterministic contract checks without API keys or network access.",
+    )
+    args = parser.parse_args()
+    raise SystemExit(run_offline_evaluation() if args.offline else run_evaluation())

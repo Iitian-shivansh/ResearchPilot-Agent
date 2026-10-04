@@ -196,6 +196,28 @@ _DANGEROUS_ATTRS = frozenset([
     "load_module", "find_module", "find_spec", "module_from_spec",
     "get_data",
 ])
+MAX_LITERAL_ALLOCATION = 100_000_000
+
+
+def _numeric_literal(node: ast.AST) -> int | None:
+    """Evaluate only small integer AST expressions used as allocation sizes."""
+
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Pow, ast.Mult, ast.Add, ast.Sub)):
+        left = _numeric_literal(node.left)
+        right = _numeric_literal(node.right)
+        if left is None or right is None:
+            return None
+        if isinstance(node.op, ast.Pow) and right > 32:
+            return None
+        return {
+            ast.Pow: lambda: left ** right,
+            ast.Mult: lambda: left * right,
+            ast.Add: lambda: left + right,
+            ast.Sub: lambda: left - right,
+        }[type(node.op)]()
+    return None
 
 
 def _validate_ast(code: str) -> Optional[str]:
@@ -218,6 +240,17 @@ def _validate_ast(code: str) -> Optional[str]:
         return None
 
     for node in ast.walk(tree):
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+            constants = (node.left, node.right)
+            literal = next((item for item in constants if isinstance(item, ast.Constant)), None)
+            multiplier = None
+            for item in constants:
+                evaluated = _numeric_literal(item)
+                if evaluated is not None:
+                    multiplier = evaluated
+            if isinstance(literal, ast.Constant) and isinstance(literal.value, (str, bytes, tuple, list)):
+                if multiplier is not None and len(literal.value) * multiplier > MAX_LITERAL_ALLOCATION:
+                    return "Literal allocation exceeds the sandbox limit"
         # 1. Reject dunder attribute access
         if isinstance(node, ast.Attribute):
             if node.attr.startswith("__"):

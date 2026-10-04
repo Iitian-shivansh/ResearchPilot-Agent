@@ -220,7 +220,18 @@ Run the optional live evaluation only after configuring all services:
 python evaluate.py
 ```
 
-The evaluation script makes multiple LLM/tool calls, sleeps between questions to reduce rate-limit pressure, and rewrites `EVALUATION.md` with its results. The current checked-in evaluation records successful runs for five sample questions, with critic revisions on some complex questions.
+The live evaluation makes multiple LLM/tool calls, sleeps between questions to reduce
+rate-limit pressure, and rewrites `EVALUATION.md`. For deterministic CI/local checks that
+require no API keys or network access, run:
+
+```bash
+python evaluate.py --offline
+```
+
+The offline evaluator validates graph status and structured evidence integrity, writes a
+reviewable `EVALUATION.md`, and exits non-zero for contract violations. Its synthetic cases
+are intentionally not a measure of model quality; use the live evaluation and human review
+for that.
 
 ## Sandbox security
 

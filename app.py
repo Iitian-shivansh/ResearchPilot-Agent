@@ -113,16 +113,20 @@ if submission:
 
     if final_answer:
         st.session_state.conversation.append({"role": "assistant", "content": final_answer})
-    st.session_state.last_result = {
-        "query": query,
-        "answer": final_answer,
-        "mode": mode,
-        "trace": trace,
-        "attachments": [item.name for item in attachments],
-    }
+    st.session_state.last_result = (
+        {
+            "query": query,
+            "answer": final_answer,
+            "mode": mode,
+            "trace": trace,
+            "attachments": [item.name for item in attachments],
+        }
+        if final_answer
+        else None
+    )
     st.rerun()
 
-if st.session_state.last_result:
+if st.session_state.last_result and st.session_state.last_result.get("answer"):
     result = st.session_state.last_result
     report = build_markdown_report(
         result["query"],

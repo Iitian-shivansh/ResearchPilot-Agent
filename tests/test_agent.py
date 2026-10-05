@@ -6,7 +6,7 @@ from unittest import TestCase
 from langchain_core.messages import AIMessage
 from langchain_core.tools import tool
 
-from src.agent import create_agent_graph, is_fast_query
+from src.agent import create_agent_graph, describe_api_error, is_fast_query
 
 
 class FakeLLM:
@@ -52,6 +52,10 @@ def fake_research(query: str) -> str:
 
 
 class TestAgentGraph(TestCase):
+    def test_api_errors_are_categorized_without_raw_provider_details(self):
+        self.assertIn("Authentication failed", describe_api_error(RuntimeError("401 unauthorized")))
+        self.assertIn("Rate limit", describe_api_error(RuntimeError("429 too many requests")))
+        self.assertIn("model is unavailable", describe_api_error(RuntimeError("404 model not found")))
     def test_fast_query_uses_one_direct_model_call(self):
         llm = FakeLLM([AIMessage(content="Paris.")])
         state = create_agent_graph(

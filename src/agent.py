@@ -73,6 +73,21 @@ def _is_rate_limit(error: Exception) -> bool:
     return "429" in text or "rate" in text
 
 
+def describe_api_error(error: Exception) -> str:
+    """Return a useful, safe category for provider errors without exposing secrets."""
+
+    text = str(error).lower()
+    if "401" in text or "authentication" in text or "unauthorized" in text:
+        return "Authentication failed. Check the GROQ_API_KEY."
+    if "429" in text or "rate limit" in text or "too many requests" in text:
+        return "Rate limit reached. Wait and retry, or check the provider quota."
+    if "404" in text or "model" in text and "not found" in text:
+        return "The configured model is unavailable. Check the model name and provider access."
+    if "400" in text or "bad request" in text or "invalid" in text:
+        return "The provider rejected the request. Try a shorter question or simpler tool request."
+    return f"Provider request failed ({type(error).__name__}). Check deployment logs for details."
+
+
 def _tool_rounds(messages: list[AnyMessage]) -> int:
     return sum(1 for message in messages if message.type == "tool")
 
@@ -224,14 +239,14 @@ def create_agent_graph(
             except Exception as error:
                 return {
                     "run_status": "executor_failed",
-                    "messages": [AIMessage(content=f"Tool-call formatting failed: {type(error).__name__}")],
+                    "messages": [AIMessage(content=f"Tool-call formatting failed: {describe_api_error(error)}")],
                     "trace": [_trace("executor", "failed")],
                 }
         except Exception as error:
             if not _is_rate_limit(error):
                 return {
                     "run_status": "executor_failed",
-                    "messages": [AIMessage(content=f"Executor failed: {type(error).__name__}")],
+                    "messages": [AIMessage(content=f"Executor failed: {describe_api_error(error)}")],
                     "trace": [_trace("executor", "failed")],
                 }
             time.sleep(rate_limit_delay)
@@ -240,7 +255,7 @@ def create_agent_graph(
             except Exception as retry_error:
                 return {
                     "run_status": "executor_failed",
-                    "messages": [AIMessage(content=f"Executor retry failed: {type(retry_error).__name__}")],
+                    "messages": [AIMessage(content=f"Executor retry failed: {describe_api_error(retry_error)}")],
                     "trace": [_trace("executor", "failed")],
                 }
         return {

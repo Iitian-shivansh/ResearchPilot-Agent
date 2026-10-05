@@ -90,13 +90,9 @@ if submission:
                     trace.extend(update.get("trace", []))
                     status.write(f"{node_name}: {run_status}")
 
-                    if node_name == "executor":
+                    if node_name in {"fast_answer", "executor", "synthesis"}:
                         for message in update.get("messages", []):
                             if isinstance(message, AIMessage) and not message.tool_calls and message.content:
-                                final_answer = str(message.content)
-                    elif node_name == "synthesis":
-                        for message in update.get("messages", []):
-                            if isinstance(message, AIMessage) and message.content:
                                 final_answer = str(message.content)
                     elif node_name == "tools":
                         for message in update.get("messages", []):

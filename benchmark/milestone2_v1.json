@@ -1,0 +1,1374 @@
+{
+  "schema_version": "1.0",
+  "benchmark_version": "milestone2_v1",
+  "description": "Versioned deterministic and failure-injection benchmark for ResearchPilot evaluation.",
+  "reference_provenance": "Synthetic controlled fixtures; no claim of live-source authority.",
+  "cases": [
+    {
+      "case_id": "m2-001",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 1.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-1]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-002",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 2.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-2]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-003",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 3.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "failure",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-3]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "invalid_citation"
+    },
+    {
+      "case_id": "m2-004",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 4.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-4]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-005",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 5.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-5]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-006",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 6.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-6]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-007",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 7.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-7]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-008",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 8.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-8]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-009",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 9.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-9]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-010",
+      "category": "web-search",
+      "question": "Controlled web-search benchmark task 10.",
+      "description": "Deterministic fixture for web-search.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-10]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-011",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 11.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-11]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-012",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 12.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "failure",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-12]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "missing_evidence"
+    },
+    {
+      "case_id": "m2-013",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 13.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-13]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-014",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 14.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-14]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-015",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 15.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-15]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-016",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 16.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-16]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-017",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 17.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "failure",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-17]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "invalid_citation"
+    },
+    {
+      "case_id": "m2-018",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 18.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-18]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-019",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 19.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-19]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-020",
+      "category": "knowledge-base",
+      "question": "Controlled knowledge-base benchmark task 20.",
+      "description": "Deterministic fixture for knowledge-base.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "knowledge_base"
+      ],
+      "expected_evidence_ids": [
+        "[KB-20]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-021",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 21.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-21]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-022",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 22.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-22]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-023",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 23.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-23]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-024",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 24.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-24]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-025",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 25.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-25]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-026",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 26.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-26]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-027",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 27.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-27]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-028",
+      "category": "multi-source",
+      "question": "Controlled multi-source benchmark task 28.",
+      "description": "Deterministic fixture for multi-source.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-28]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-029",
+      "category": "comparison",
+      "question": "Controlled comparison benchmark task 29.",
+      "description": "Deterministic fixture for comparison.",
+      "expected_outcome": "failure",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-29]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "invalid_citation"
+    },
+    {
+      "case_id": "m2-030",
+      "category": "comparison",
+      "question": "Controlled comparison benchmark task 30.",
+      "description": "Deterministic fixture for comparison.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-30]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-031",
+      "category": "comparison",
+      "question": "Controlled comparison benchmark task 31.",
+      "description": "Deterministic fixture for comparison.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-31]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-032",
+      "category": "comparison",
+      "question": "Controlled comparison benchmark task 32.",
+      "description": "Deterministic fixture for comparison.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-32]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-033",
+      "category": "comparison",
+      "question": "Controlled comparison benchmark task 33.",
+      "description": "Deterministic fixture for comparison.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-33]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-034",
+      "category": "conflicting-evidence",
+      "question": "Controlled conflicting-evidence benchmark task 34.",
+      "description": "Deterministic fixture for conflicting-evidence.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-34]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-035",
+      "category": "conflicting-evidence",
+      "question": "Controlled conflicting-evidence benchmark task 35.",
+      "description": "Deterministic fixture for conflicting-evidence.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-35]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-036",
+      "category": "conflicting-evidence",
+      "question": "Controlled conflicting-evidence benchmark task 36.",
+      "description": "Deterministic fixture for conflicting-evidence.",
+      "expected_outcome": "failure",
+      "expected_status": "executor_failed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-36]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "tool_failure"
+    },
+    {
+      "case_id": "m2-037",
+      "category": "conflicting-evidence",
+      "question": "Controlled conflicting-evidence benchmark task 37.",
+      "description": "Deterministic fixture for conflicting-evidence.",
+      "expected_outcome": "failure",
+      "expected_status": "executor_failed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-37]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "tool_failure"
+    },
+    {
+      "case_id": "m2-038",
+      "category": "conflicting-evidence",
+      "question": "Controlled conflicting-evidence benchmark task 38.",
+      "description": "Deterministic fixture for conflicting-evidence.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "web"
+      ],
+      "expected_evidence_ids": [
+        "[WEB-38]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-039",
+      "category": "insufficient-evidence",
+      "question": "Controlled insufficient-evidence benchmark task 39.",
+      "description": "Deterministic fixture for insufficient-evidence.",
+      "expected_outcome": "abstain",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [
+        "abstention_or_explicit_uncertainty"
+      ],
+      "must_not_claim": [
+        "unsupported certainty"
+      ],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "abstain"
+    },
+    {
+      "case_id": "m2-040",
+      "category": "insufficient-evidence",
+      "question": "Controlled insufficient-evidence benchmark task 40.",
+      "description": "Deterministic fixture for insufficient-evidence.",
+      "expected_outcome": "abstain",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [
+        "abstention_or_explicit_uncertainty"
+      ],
+      "must_not_claim": [
+        "unsupported certainty"
+      ],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "abstain"
+    },
+    {
+      "case_id": "m2-041",
+      "category": "insufficient-evidence",
+      "question": "Controlled insufficient-evidence benchmark task 41.",
+      "description": "Deterministic fixture for insufficient-evidence.",
+      "expected_outcome": "abstain",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [
+        "abstention_or_explicit_uncertainty"
+      ],
+      "must_not_claim": [
+        "unsupported certainty"
+      ],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "abstain"
+    },
+    {
+      "case_id": "m2-042",
+      "category": "insufficient-evidence",
+      "question": "Controlled insufficient-evidence benchmark task 42.",
+      "description": "Deterministic fixture for insufficient-evidence.",
+      "expected_outcome": "abstain",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [
+        "abstention_or_explicit_uncertainty"
+      ],
+      "must_not_claim": [
+        "unsupported certainty"
+      ],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "abstain"
+    },
+    {
+      "case_id": "m2-043",
+      "category": "insufficient-evidence",
+      "question": "Controlled insufficient-evidence benchmark task 43.",
+      "description": "Deterministic fixture for insufficient-evidence.",
+      "expected_outcome": "abstain",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [
+        "abstention_or_explicit_uncertainty"
+      ],
+      "must_not_claim": [
+        "unsupported certainty"
+      ],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "abstain"
+    },
+    {
+      "case_id": "m2-044",
+      "category": "tool-failure",
+      "question": "Controlled tool-failure benchmark task 44.",
+      "description": "Deterministic fixture for tool-failure.",
+      "expected_outcome": "failure",
+      "expected_status": "executor_failed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": true,
+      "fixture": "tool_failure"
+    },
+    {
+      "case_id": "m2-045",
+      "category": "tool-failure",
+      "question": "Controlled tool-failure benchmark task 45.",
+      "description": "Deterministic fixture for tool-failure.",
+      "expected_outcome": "failure",
+      "expected_status": "executor_failed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "tool_failure"
+    },
+    {
+      "case_id": "m2-046",
+      "category": "tool-failure",
+      "question": "Controlled tool-failure benchmark task 46.",
+      "description": "Deterministic fixture for tool-failure.",
+      "expected_outcome": "failure",
+      "expected_status": "executor_failed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "tool_failure"
+    },
+    {
+      "case_id": "m2-047",
+      "category": "tool-failure",
+      "question": "Controlled tool-failure benchmark task 47.",
+      "description": "Deterministic fixture for tool-failure.",
+      "expected_outcome": "failure",
+      "expected_status": "executor_failed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [],
+      "expected_evidence_ids": [],
+      "citation_requirements": [],
+      "must_not_claim": [],
+      "expected_failure_behavior": "Return explicit non-success and preserve the failure reason.",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "tool_failure"
+    },
+    {
+      "case_id": "m2-048",
+      "category": "calculation",
+      "question": "Controlled calculation benchmark task 48.",
+      "description": "Deterministic fixture for calculation.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "calculation"
+      ],
+      "expected_evidence_ids": [
+        "[CALC-48]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-049",
+      "category": "calculation",
+      "question": "Controlled calculation benchmark task 49.",
+      "description": "Deterministic fixture for calculation.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "calculation"
+      ],
+      "expected_evidence_ids": [
+        "[CALC-49]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    },
+    {
+      "case_id": "m2-050",
+      "category": "calculation",
+      "question": "Controlled calculation benchmark task 50.",
+      "description": "Deterministic fixture for calculation.",
+      "expected_outcome": "success",
+      "expected_status": "completed",
+      "required_facts": [
+        "fixture result is handled according to policy"
+      ],
+      "required_source_types": [
+        "calculation"
+      ],
+      "expected_evidence_ids": [
+        "[CALC-50]"
+      ],
+      "citation_requirements": [
+        "at_least_one_evidence_id"
+      ],
+      "must_not_claim": [],
+      "expected_failure_behavior": "N/A",
+      "grading_notes": "Controlled offline fixture; does not measure live provider quality.",
+      "expected_claims": [
+        "answer"
+      ],
+      "expected_recovery": false,
+      "fixture": "supported"
+    }
+  ]
+}

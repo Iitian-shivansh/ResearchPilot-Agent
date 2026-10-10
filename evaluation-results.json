@@ -1,0 +1,2727 @@
+{
+  "benchmark": "milestone2_v1",
+  "mode": "offline",
+  "deterministic": true,
+  "external_calls": false,
+  "metric_definitions": {
+    "expected_behavior_pass_rate": "expected-behavior checks passed / attempted cases; includes correctly handled failures and abstentions.",
+    "offline_fixture_task_success_rate": "successful controlled offline fixture cases / cases whose expected outcome is success; excludes failure and abstention fixtures and is not real-world research accuracy.",
+    "evidence_validity": "valid cited evidence IDs / cited evidence IDs; current-run structured evidence only.",
+    "evidence_coverage": "applicable required evidence references satisfied / applicable required references; cases without requirements excluded.",
+    "unsupported_claim_rate": "unsupported fixture-labeled claims / claims independently labeled in offline fixtures; not semantic accuracy.",
+    "recovery": "eligible recoverable-failure cases with observed recovery and expected outcome / eligible recoverable-failure cases."
+  },
+  "limitations": [
+    "Offline fixtures validate contracts and recovery bookkeeping, not model quality.",
+    "Claim support labels do not establish factual truth.",
+    "Live latency, usage, and provider cost are not measured offline."
+  ],
+  "summary": {
+    "case_count": 50,
+    "attempted": 50,
+    "expected_behavior_pass_rate_numerator": 50,
+    "expected_behavior_pass_rate_denominator": 50,
+    "offline_fixture_task_success_rate_numerator": 35,
+    "offline_fixture_task_success_rate_denominator": 35,
+    "evidence_coverage_numerator": 35,
+    "evidence_coverage_denominator": 35,
+    "evidence_validity_numerator": 35,
+    "evidence_validity_denominator": 38,
+    "recovery_numerator": 1,
+    "recovery_denominator": 1,
+    "unsupported_claim_numerator": 3,
+    "unsupported_claim_denominator": 38,
+    "observed_failure_count": 6,
+    "status_counts": {
+      "passed": 50,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "not_assessed": 0
+    },
+    "metrics": {
+      "expected_behavior_pass_rate": 1.0,
+      "offline_fixture_task_success_rate": 1.0,
+      "evidence_validity": 0.9211,
+      "evidence_coverage": 1.0,
+      "recovery": 1.0,
+      "unsupported_claim_rate": 0.0789
+    },
+    "raw_metrics": {
+      "expected_behavior_pass_rate": 1.0,
+      "offline_fixture_task_success_rate": 1.0,
+      "evidence_validity": 0.9210526315789473,
+      "evidence_coverage": 1.0,
+      "recovery": 1.0,
+      "unsupported_claim_rate": 0.07894736842105263
+    },
+    "thresholds": {
+      "offline_fixture_task_success_rate": 1.0,
+      "evidence_validity": 0.9,
+      "evidence_coverage": 0.88,
+      "unsupported_claim_rate": 0.1
+    },
+    "regression_passed": true,
+    "regression_failures": []
+  },
+  "results": [
+    {
+      "case_id": "m2-001",
+      "question": "Controlled web-search benchmark task 1.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-001. [WEB-1]",
+      "cited_evidence_ids": [
+        "[WEB-1]"
+      ],
+      "available_evidence_ids": [
+        "WEB-1"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-002",
+      "question": "Controlled web-search benchmark task 2.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-002. [WEB-2]",
+      "cited_evidence_ids": [
+        "[WEB-2]"
+      ],
+      "available_evidence_ids": [
+        "WEB-2"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-003",
+      "question": "Controlled web-search benchmark task 3.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-003. [WEB-999]",
+      "cited_evidence_ids": [
+        "[WEB-999]"
+      ],
+      "available_evidence_ids": [
+        "WEB-3"
+      ],
+      "failures": [
+        "invalid evidence IDs: [WEB-999]",
+        "missing evidence IDs: [WEB-3]"
+      ],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [
+        "invalid evidence IDs: [WEB-999]",
+        "missing evidence IDs: [WEB-3]"
+      ],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 0.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 0.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [
+        "unsupported"
+      ],
+      "unsupported_claims": 1,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-004",
+      "question": "Controlled web-search benchmark task 4.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-004. [WEB-4]",
+      "cited_evidence_ids": [
+        "[WEB-4]"
+      ],
+      "available_evidence_ids": [
+        "WEB-4"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-005",
+      "question": "Controlled web-search benchmark task 5.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-005. [WEB-5]",
+      "cited_evidence_ids": [
+        "[WEB-5]"
+      ],
+      "available_evidence_ids": [
+        "WEB-5"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-006",
+      "question": "Controlled web-search benchmark task 6.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-006. [WEB-6]",
+      "cited_evidence_ids": [
+        "[WEB-6]"
+      ],
+      "available_evidence_ids": [
+        "WEB-6"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-007",
+      "question": "Controlled web-search benchmark task 7.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-007. [WEB-7]",
+      "cited_evidence_ids": [
+        "[WEB-7]"
+      ],
+      "available_evidence_ids": [
+        "WEB-7"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-008",
+      "question": "Controlled web-search benchmark task 8.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-008. [WEB-8]",
+      "cited_evidence_ids": [
+        "[WEB-8]"
+      ],
+      "available_evidence_ids": [
+        "WEB-8"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-009",
+      "question": "Controlled web-search benchmark task 9.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-009. [WEB-9]",
+      "cited_evidence_ids": [
+        "[WEB-9]"
+      ],
+      "available_evidence_ids": [
+        "WEB-9"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-010",
+      "question": "Controlled web-search benchmark task 10.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-010. [WEB-10]",
+      "cited_evidence_ids": [
+        "[WEB-10]"
+      ],
+      "available_evidence_ids": [
+        "WEB-10"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-011",
+      "question": "Controlled knowledge-base benchmark task 11.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-011. [KB-11]",
+      "cited_evidence_ids": [
+        "[KB-11]"
+      ],
+      "available_evidence_ids": [
+        "KB-11"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-012",
+      "question": "Controlled knowledge-base benchmark task 12.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-012.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [
+        "missing evidence IDs: [KB-12]"
+      ],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [
+        "missing evidence IDs: [KB-12]"
+      ],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 0.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-013",
+      "question": "Controlled knowledge-base benchmark task 13.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-013. [KB-13]",
+      "cited_evidence_ids": [
+        "[KB-13]"
+      ],
+      "available_evidence_ids": [
+        "KB-13"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-014",
+      "question": "Controlled knowledge-base benchmark task 14.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-014. [KB-14]",
+      "cited_evidence_ids": [
+        "[KB-14]"
+      ],
+      "available_evidence_ids": [
+        "KB-14"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-015",
+      "question": "Controlled knowledge-base benchmark task 15.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-015. [KB-15]",
+      "cited_evidence_ids": [
+        "[KB-15]"
+      ],
+      "available_evidence_ids": [
+        "KB-15"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-016",
+      "question": "Controlled knowledge-base benchmark task 16.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-016. [KB-16]",
+      "cited_evidence_ids": [
+        "[KB-16]"
+      ],
+      "available_evidence_ids": [
+        "KB-16"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-017",
+      "question": "Controlled knowledge-base benchmark task 17.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-017. [WEB-999]",
+      "cited_evidence_ids": [
+        "[WEB-999]"
+      ],
+      "available_evidence_ids": [
+        "KB-17"
+      ],
+      "failures": [
+        "invalid evidence IDs: [WEB-999]",
+        "missing evidence IDs: [KB-17]"
+      ],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [
+        "invalid evidence IDs: [WEB-999]",
+        "missing evidence IDs: [KB-17]"
+      ],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 0.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 0.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [
+        "unsupported"
+      ],
+      "unsupported_claims": 1,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-018",
+      "question": "Controlled knowledge-base benchmark task 18.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-018. [KB-18]",
+      "cited_evidence_ids": [
+        "[KB-18]"
+      ],
+      "available_evidence_ids": [
+        "KB-18"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-019",
+      "question": "Controlled knowledge-base benchmark task 19.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-019. [KB-19]",
+      "cited_evidence_ids": [
+        "[KB-19]"
+      ],
+      "available_evidence_ids": [
+        "KB-19"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-020",
+      "question": "Controlled knowledge-base benchmark task 20.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-020. [KB-20]",
+      "cited_evidence_ids": [
+        "[KB-20]"
+      ],
+      "available_evidence_ids": [
+        "KB-20"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-021",
+      "question": "Controlled multi-source benchmark task 21.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-021. [WEB-21]",
+      "cited_evidence_ids": [
+        "[WEB-21]"
+      ],
+      "available_evidence_ids": [
+        "WEB-21"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-022",
+      "question": "Controlled multi-source benchmark task 22.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-022. [WEB-22]",
+      "cited_evidence_ids": [
+        "[WEB-22]"
+      ],
+      "available_evidence_ids": [
+        "WEB-22"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-023",
+      "question": "Controlled multi-source benchmark task 23.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-023. [WEB-23]",
+      "cited_evidence_ids": [
+        "[WEB-23]"
+      ],
+      "available_evidence_ids": [
+        "WEB-23"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-024",
+      "question": "Controlled multi-source benchmark task 24.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-024. [WEB-24]",
+      "cited_evidence_ids": [
+        "[WEB-24]"
+      ],
+      "available_evidence_ids": [
+        "WEB-24"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-025",
+      "question": "Controlled multi-source benchmark task 25.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-025. [WEB-25]",
+      "cited_evidence_ids": [
+        "[WEB-25]"
+      ],
+      "available_evidence_ids": [
+        "WEB-25"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-026",
+      "question": "Controlled multi-source benchmark task 26.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-026. [WEB-26]",
+      "cited_evidence_ids": [
+        "[WEB-26]"
+      ],
+      "available_evidence_ids": [
+        "WEB-26"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-027",
+      "question": "Controlled multi-source benchmark task 27.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-027. [WEB-27]",
+      "cited_evidence_ids": [
+        "[WEB-27]"
+      ],
+      "available_evidence_ids": [
+        "WEB-27"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-028",
+      "question": "Controlled multi-source benchmark task 28.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-028. [WEB-28]",
+      "cited_evidence_ids": [
+        "[WEB-28]"
+      ],
+      "available_evidence_ids": [
+        "WEB-28"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-029",
+      "question": "Controlled comparison benchmark task 29.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-029. [WEB-999]",
+      "cited_evidence_ids": [
+        "[WEB-999]"
+      ],
+      "available_evidence_ids": [
+        "WEB-29"
+      ],
+      "failures": [
+        "invalid evidence IDs: [WEB-999]",
+        "missing evidence IDs: [WEB-29]"
+      ],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [
+        "invalid evidence IDs: [WEB-999]",
+        "missing evidence IDs: [WEB-29]"
+      ],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 0.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 0.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [
+        "unsupported"
+      ],
+      "unsupported_claims": 1,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-030",
+      "question": "Controlled comparison benchmark task 30.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-030. [WEB-30]",
+      "cited_evidence_ids": [
+        "[WEB-30]"
+      ],
+      "available_evidence_ids": [
+        "WEB-30"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-031",
+      "question": "Controlled comparison benchmark task 31.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-031. [WEB-31]",
+      "cited_evidence_ids": [
+        "[WEB-31]"
+      ],
+      "available_evidence_ids": [
+        "WEB-31"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-032",
+      "question": "Controlled comparison benchmark task 32.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-032. [WEB-32]",
+      "cited_evidence_ids": [
+        "[WEB-32]"
+      ],
+      "available_evidence_ids": [
+        "WEB-32"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-033",
+      "question": "Controlled comparison benchmark task 33.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-033. [WEB-33]",
+      "cited_evidence_ids": [
+        "[WEB-33]"
+      ],
+      "available_evidence_ids": [
+        "WEB-33"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-034",
+      "question": "Controlled conflicting-evidence benchmark task 34.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-034. [WEB-34]",
+      "cited_evidence_ids": [
+        "[WEB-34]"
+      ],
+      "available_evidence_ids": [
+        "WEB-34"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-035",
+      "question": "Controlled conflicting-evidence benchmark task 35.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-035. [WEB-35]",
+      "cited_evidence_ids": [
+        "[WEB-35]"
+      ],
+      "available_evidence_ids": [
+        "WEB-35"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-036",
+      "question": "Controlled conflicting-evidence benchmark task 36.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "executor_failed",
+      "answer": "Deterministic answer for m2-036.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [
+        "missing evidence IDs: [WEB-36]"
+      ],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [
+        "missing evidence IDs: [WEB-36]"
+      ],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 0.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-037",
+      "question": "Controlled conflicting-evidence benchmark task 37.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "executor_failed",
+      "answer": "Deterministic answer for m2-037.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [
+        "missing evidence IDs: [WEB-37]"
+      ],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [
+        "missing evidence IDs: [WEB-37]"
+      ],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 0.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-038",
+      "question": "Controlled conflicting-evidence benchmark task 38.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-038. [WEB-38]",
+      "cited_evidence_ids": [
+        "[WEB-38]"
+      ],
+      "available_evidence_ids": [
+        "WEB-38"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-039",
+      "question": "Controlled insufficient-evidence benchmark task 39.",
+      "mode": "Deep",
+      "expected_outcome": "abstain",
+      "status": "completed",
+      "answer": "Insufficient evidence to answer this question reliably.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": true,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-040",
+      "question": "Controlled insufficient-evidence benchmark task 40.",
+      "mode": "Deep",
+      "expected_outcome": "abstain",
+      "status": "completed",
+      "answer": "Insufficient evidence to answer this question reliably.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": true,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-041",
+      "question": "Controlled insufficient-evidence benchmark task 41.",
+      "mode": "Deep",
+      "expected_outcome": "abstain",
+      "status": "completed",
+      "answer": "Insufficient evidence to answer this question reliably.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": true,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-042",
+      "question": "Controlled insufficient-evidence benchmark task 42.",
+      "mode": "Deep",
+      "expected_outcome": "abstain",
+      "status": "completed",
+      "answer": "Insufficient evidence to answer this question reliably.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": true,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-043",
+      "question": "Controlled insufficient-evidence benchmark task 43.",
+      "mode": "Deep",
+      "expected_outcome": "abstain",
+      "status": "completed",
+      "answer": "Insufficient evidence to answer this question reliably.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": true,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-044",
+      "question": "Controlled tool-failure benchmark task 44.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "executor_failed",
+      "answer": "Deterministic answer for m2-044.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": true,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": true,
+      "recovery_eligible": true,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-045",
+      "question": "Controlled tool-failure benchmark task 45.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "executor_failed",
+      "answer": "Deterministic answer for m2-045.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-046",
+      "question": "Controlled tool-failure benchmark task 46.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "executor_failed",
+      "answer": "Deterministic answer for m2-046.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-047",
+      "question": "Controlled tool-failure benchmark task 47.",
+      "mode": "Deep",
+      "expected_outcome": "failure",
+      "status": "executor_failed",
+      "answer": "Deterministic answer for m2-047.",
+      "cited_evidence_ids": [],
+      "available_evidence_ids": [],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": true,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": false,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 0,
+      "evidence_validity_denominator": 0,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 0,
+      "evidence_coverage_denominator": 0,
+      "evidence_coverage_applicable": false,
+      "claim_support_labels": [],
+      "unsupported_claims": 0,
+      "claim_count": 0,
+      "unsupported_claim_denominator": 0,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-048",
+      "question": "Controlled calculation benchmark task 48.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-048. [CALC-48]",
+      "cited_evidence_ids": [
+        "[CALC-48]"
+      ],
+      "available_evidence_ids": [
+        "CALC-48"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-049",
+      "question": "Controlled calculation benchmark task 49.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-049. [CALC-49]",
+      "cited_evidence_ids": [
+        "[CALC-49]"
+      ],
+      "available_evidence_ids": [
+        "CALC-49"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    },
+    {
+      "case_id": "m2-050",
+      "question": "Controlled calculation benchmark task 50.",
+      "mode": "Deep",
+      "expected_outcome": "success",
+      "status": "completed",
+      "answer": "Deterministic answer for m2-050. [CALC-50]",
+      "cited_evidence_ids": [
+        "[CALC-50]"
+      ],
+      "available_evidence_ids": [
+        "CALC-50"
+      ],
+      "failures": [],
+      "passed": true,
+      "outcome": "passed",
+      "expected_failure": false,
+      "expected_abstention": false,
+      "expected_behavior_passed": true,
+      "observed_failures": [],
+      "task_success": true,
+      "expected_recovery": false,
+      "evidence_validity": 1.0,
+      "evidence_validity_numerator": 1,
+      "evidence_validity_denominator": 1,
+      "evidence_coverage": 1.0,
+      "evidence_coverage_numerator": 1,
+      "evidence_coverage_denominator": 1,
+      "evidence_coverage_applicable": true,
+      "claim_support_labels": [
+        "supported"
+      ],
+      "unsupported_claims": 0,
+      "claim_count": 1,
+      "unsupported_claim_denominator": 1,
+      "recovery": false,
+      "recovery_eligible": false,
+      "latency_ms": 0,
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost": 0.0,
+      "availability": {
+        "latency": true,
+        "usage": true,
+        "cost": true
+      },
+      "limitations": [
+        "Claim labels are citation-contract classifications, not factuality judgments.",
+        "Latency, token usage, and cost are unavailable when the runner does not provide them."
+      ]
+    }
+  ]
+}

@@ -198,6 +198,26 @@ If no question is provided, the CLI prompts interactively. The CLI requires `GRO
 
 ## Tests and evaluation
 
+### Milestone 2 benchmark
+
+`benchmark/milestone2_v1.json` is a versioned 50-case contract benchmark. The
+reproducible evaluator is offline by default: it uses deterministic fixtures,
+makes no model, vector database, or web calls, and writes both
+`evaluation-results.json` and `EVALUATION.md`.
+
+```bash
+python evaluate.py
+```
+
+The report includes per-case expected behavior and the explicitly named
+`offline_fixture_task_success_rate`, evidence validity and coverage,
+claim-support labels, unsupported-claim counts, recovery, and latency/usage/cost
+availability, plus aggregate regression thresholds from
+`benchmark/thresholds.json`. Live evaluation is never implicit; `python
+evaluate.py --live` requires all production configuration and runs selected cases
+against the configured agent. Use `--limit N` and repeatable `--category NAME`
+to control consumption.
+
 The sandbox tests do not require API keys or external services:
 
 ```bash
@@ -231,7 +251,7 @@ python -m pytest tests/test_sandbox.py -v
 Run the optional live evaluation only after configuring all services:
 
 ```bash
-python evaluate.py
+python evaluate.py --live --limit 3
 ```
 
 The live evaluation makes multiple LLM/tool calls, sleeps between questions to reduce
@@ -239,7 +259,7 @@ rate-limit pressure, and rewrites `EVALUATION.md`. For deterministic CI/local ch
 require no API keys or network access, run:
 
 ```bash
-python evaluate.py --offline
+python evaluate.py --category web-search
 ```
 
 The offline evaluator validates graph status and structured evidence integrity, writes a

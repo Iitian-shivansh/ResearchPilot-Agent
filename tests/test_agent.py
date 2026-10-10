@@ -6,7 +6,7 @@ from unittest import TestCase
 from langchain_core.messages import AIMessage
 from langchain_core.tools import tool
 
-from src.agent import create_agent_graph, is_fast_query
+from src.agent import _citation_status, _register_tool_evidence, create_agent_graph, is_fast_query
 
 
 class FakeLLM:
@@ -70,12 +70,54 @@ class TestAgentGraph(TestCase):
         self.assertFalse(is_fast_query("Research the latest result"))
         self.assertTrue(is_fast_query("What is 2 plus 2?"))
 
+    def test_citations_are_exact_and_current_run_only(self):
+        from langchain_core.messages import HumanMessage, ToolMessage
+        old = ToolMessage(content=json.dumps({"ok": True, "tool_name": "x",
+            "evidence": [{"evidence_id": "WEB-1", "source_type": "web", "source_id": "old"}]}),
+            tool_call_id="old")
+        current = ToolMessage(content=json.dumps({"ok": True, "tool_name": "x",
+            "evidence": [{"evidence_id": "WEB-2", "source_type": "web", "source_id": "new"}]}),
+            tool_call_id="new")
+        messages = [HumanMessage(content="old"), old, HumanMessage(content="new"), current]
+        self.assertEqual(_citation_status(messages, "Claim [WEB-1]."), "invalid")
+        self.assertEqual(_citation_status(messages, "Claim [WEB-2]."), "present")
+        self.assertEqual(_citation_status(messages, "Claim [WEB-99]."), "invalid")
+
+    def test_url_citations_are_validated_against_current_run(self):
+        from langchain_core.messages import HumanMessage, ToolMessage
+        content = json.dumps({"ok": True, "tool_name": "web", "evidence": [
+            {"evidence_id": "WEB-1", "source_type": "web",
+             "source_id": "https://example.test/article?x=1", "excerpt": "text"}
+        ]})
+        messages = [HumanMessage(content="new"), ToolMessage(content=content, tool_call_id="new")]
+        self.assertEqual(_citation_status(messages, "[Read](https://example.test/article?x=1)."), "present")
+        self.assertEqual(_citation_status(messages, "https://example.test/fake"), "invalid")
+        self.assertEqual(_citation_status(messages, "[Read](https://example.test/article?x=2)"), "invalid")
+        self.assertEqual(_citation_status(messages, "[Read](https://example.test/article?x=1)."), "present")
+        self.assertEqual(_citation_status(messages, "[Read](not-a-url)"), "invalid")
+
+    def test_evidence_ids_are_unique_across_repeated_tool_calls(self):
+        from langchain_core.messages import ToolMessage
+        payload = json.dumps({"ok": True, "tool_name": "web", "evidence": [
+            {"evidence_id": "WEB-1", "source_type": "web",
+             "source_id": "https://example.test", "excerpt": "text"}
+        ]})
+        messages = [
+            ToolMessage(content=payload, tool_call_id="call-1"),
+            ToolMessage(content=payload, tool_call_id="call-2"),
+        ]
+        normalized, registry, bindings = _register_tool_evidence(messages, {}, {})
+        ids = [json.loads(message.content)["evidence"][0]["evidence_id"] for message in normalized]
+        self.assertEqual(ids, ["WEB-1", "WEB-2"])
+        self.assertEqual(set(ids), set(registry))
+        self.assertEqual(len(bindings), 2)
+
     def test_direct_answer_is_critic_approved(self):
         llm = FakeLLM(
             [
                 planner_response(),
                 AIMessage(content="Paris is the capital of France."),
-                AIMessage(content="APPROVED"),
+                AIMessage(content='{"decision":"approve","feedback":""}'),
             ]
         )
         state = create_agent_graph(llm=llm, tools=[fake_research], rate_limit_delay=0).invoke(
@@ -97,7 +139,7 @@ class TestAgentGraph(TestCase):
                 planner_response(),
                 AIMessage(content="", tool_calls=[tool_call]),
                 AIMessage(content="The evidence supports this conclusion [WEB-1]."),
-                AIMessage(content="APPROVED"),
+                AIMessage(content='{"decision":"approve","feedback":""}'),
             ]
         )
         state = create_agent_graph(llm=llm, tools=[fake_research], rate_limit_delay=0).invoke(
@@ -118,7 +160,7 @@ class TestAgentGraph(TestCase):
         state = create_agent_graph(llm=llm, tools=[fake_research], rate_limit_delay=0).invoke(
             {"messages": [{"role": "user", "content": "Give me an answer."}]}
         )
-        self.assertEqual(state["run_status"], "critic_unavailable")
+        self.assertEqual(state["run_status"], "critic_failed")
         self.assertEqual(state["critic_status"], "unavailable")
 
     def test_tool_limit_forces_synthesis(self):
@@ -135,7 +177,7 @@ class TestAgentGraph(TestCase):
                 AIMessage(content="Final answer [WEB-1]."),
             ]
         )
-        responses.extend([AIMessage(content="APPROVED")])
+        responses.extend([AIMessage(content='{"decision":"approve","feedback":""}')])
         llm = FakeLLM(responses)
         state = create_agent_graph(
             llm=llm,

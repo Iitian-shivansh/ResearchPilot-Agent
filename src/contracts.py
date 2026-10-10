@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Literal
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class Evidence:
     source_id: str
     excerpt: str = ""
     score: float | None = None
+    title: str = ""
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,37 @@ class ToolResult:
         return json.dumps(asdict(self), ensure_ascii=False)
 
 
+@dataclass(frozen=True)
+class CriticDecision:
+    """The only values the graph accepts as a critic terminal decision."""
+
+    decision: Literal["approved", "revise", "rejected"]
+    feedback: str = ""
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self), ensure_ascii=False)
+
+
+def parse_critic_decision(content: str) -> CriticDecision | None:
+    """Parse strict critic JSON; prose or ambiguous output is never approval."""
+
+    try:
+        value = json.loads(content)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    if not isinstance(value, dict):
+        return None
+    decision = value.get("decision")
+    aliases = {"approve": "approved", "reject": "rejected"}
+    decision = aliases.get(decision, decision)
+    if decision not in {"approved", "revise", "rejected"}:
+        return None
+    return CriticDecision(
+        decision=decision,
+        feedback=str(value.get("feedback", "")).strip(),
+    )
+
+
 def parse_tool_result(content: str) -> ToolResult | None:
     """Parse a structured tool response, returning None for legacy output."""
 
@@ -42,7 +74,10 @@ def parse_tool_result(content: str) -> ToolResult | None:
         return None
     if not isinstance(value, dict) or not {"ok", "tool_name"} <= value.keys():
         return None
-    evidence = tuple(Evidence(**item) for item in value.get("evidence", ()))
+    try:
+        evidence = tuple(Evidence(**item) for item in value.get("evidence", ()))
+    except (TypeError, ValueError):
+        return None
     return ToolResult(
         ok=bool(value["ok"]),
         tool_name=str(value["tool_name"]),

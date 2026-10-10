@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from src.contracts import Evidence, ToolResult, parse_tool_result
+from src.contracts import Evidence, ToolResult, parse_critic_decision, parse_tool_result
 
 
 class TestContracts(TestCase):
@@ -31,3 +31,27 @@ class TestContracts(TestCase):
 
     def test_legacy_plain_text_is_not_treated_as_structured_success(self):
         self.assertIsNone(parse_tool_result("plain tool output"))
+
+    def test_critic_requires_structured_decision(self):
+        self.assertEqual(
+            parse_critic_decision('{"decision":"approve","feedback":""}').decision,
+            "approved",
+        )
+        self.assertEqual(
+            parse_critic_decision('{"decision":"approved","feedback":""}').decision,
+            "approved",
+        )
+        self.assertEqual(
+            parse_critic_decision('{"decision":"reject","feedback":"no"}').decision,
+            "rejected",
+        )
+        self.assertEqual(
+            parse_critic_decision('{"decision":"rejected","feedback":"no"}').decision,
+            "rejected",
+        )
+        self.assertEqual(
+            parse_critic_decision('{"decision":"revise","feedback":"fix"}').decision,
+            "revise",
+        )
+        self.assertIsNone(parse_critic_decision("APPROVED"))
+        self.assertIsNone(parse_critic_decision('{"decision":"maybe"}'))

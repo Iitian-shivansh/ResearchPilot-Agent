@@ -104,9 +104,13 @@ if submission:
             st.error(f"Research run failed: {error}")
             st.stop()
 
-        if final_answer:
+        verified = run_status in {"completed", "completed_after_revision", "fast_completed"}
+        if final_answer and verified:
             st.markdown(final_answer)
-        if critic_status == "unavailable":
+        if not verified:
+            final_answer = ""
+            st.error(f"Research ended without a verified answer: `{run_status}`")
+        elif critic_status == "unavailable":
             st.warning("Automated review was unavailable; treat this answer as unverified.")
         elif run_status in {"planner_failed", "executor_failed", "synthesis_failed"}:
             st.error(f"Research ended with status: `{run_status}`")

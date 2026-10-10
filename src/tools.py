@@ -6,7 +6,7 @@ import os
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from src.contracts import Evidence, ToolResult
+from src.contracts import Evidence, ToolResult, parse_tool_result
 from src.sandbox import run_code_in_subprocess
 
 logger = logging.getLogger(__name__)
@@ -14,6 +14,36 @@ logger = logging.getLogger(__name__)
 DEFAULT_KB_LIMIT = 5
 DEFAULT_KB_SCORE_THRESHOLD = 0.0
 MAX_KB_RESULT_CHARS = 1200
+
+
+def _normalize_tavily_output(output) -> str:
+    """Convert Tavily's provider-specific result shape to the shared contract."""
+    if isinstance(output, str):
+        parsed = parse_tool_result(output)
+        if parsed is not None:
+            return parsed.to_json()
+    rows = output if isinstance(output, list) else output.get("results", []) if isinstance(output, dict) else []
+    evidence = []
+    rendered = []
+    for index, row in enumerate(rows, 1):
+        if not isinstance(row, dict):
+            continue
+        url = row.get("url") or row.get("source")
+        if not url:
+            logger.warning("Ignoring Tavily result without a source URL")
+            continue
+        url = str(url)
+        excerpt = str(row.get("content") or row.get("raw_content") or row.get("title") or "")
+        evidence.append(Evidence(
+            evidence_id=f"WEB-{index}", source_type="web", source_id=url,
+            excerpt=excerpt[:1000], title=str(row.get("title") or ""),
+        ))
+        rendered.append(f"[Evidence: WEB-{index} | URL: {url}]\n{excerpt[:500]}")
+    return ToolResult(
+        ok=True, tool_name="tavily_search",
+        data={"results": "\n\n---\n\n".join(rendered), "count": len(rendered)},
+        evidence=tuple(evidence),
+    ).to_json()
 
 
 def _knowledge_base_limit() -> int:
@@ -178,5 +208,19 @@ def get_tools():
     """
     from langchain_tavily import TavilySearch
 
-    search_tool = TavilySearch(max_results=3)
-    return [search_tool, query_knowledge_base, execute_python]
+    provider = TavilySearch(max_results=3)
+
+    @tool
+    def tavily_search(query: str) -> str:
+        """Search the web and return normalized, citeable evidence."""
+        try:
+            output = provider.invoke({"query": query})
+            return _normalize_tavily_output(output)
+        except Exception as error:
+            logger.exception("Tavily search failed")
+            return ToolResult(
+                ok=False, tool_name="tavily_search",
+                error_type=type(error).__name__, error_message=str(error),
+            ).to_json()
+
+    return [tavily_search, query_knowledge_base, execute_python]

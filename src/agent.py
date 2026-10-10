@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import time
 import operator
+import re
+from dataclasses import asdict, replace
+from src.evaluation import available_evidence_urls, extract_citation_urls, normalize_citation_url
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 import groq
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
-from src.contracts import parse_tool_result
+from src.contracts import parse_critic_decision, parse_tool_result
 from src.modes import get_mode
 
 MAX_TOOL_ROUNDS = 4
@@ -44,6 +47,65 @@ class AgentState(TypedDict):
     mode: NotRequired[str]
     context: NotRequired[str]
     trace: NotRequired[Annotated[list[dict[str, str]], operator.add]]
+    evidence_registry: NotRequired[dict[str, dict]]
+    evidence_bindings: NotRequired[dict[str, str]]
+
+
+def _register_tool_evidence(
+    messages: list[AnyMessage],
+    registry: dict[str, dict] | None,
+    bindings: dict[str, str] | None,
+) -> tuple[list[ToolMessage], dict[str, dict], dict[str, str]]:
+    """Assign run-scoped IDs once, while retaining each source's provenance."""
+
+    registry = dict(registry or {})
+    bindings = dict(bindings or {})
+    normalized: list[ToolMessage] = []
+    counters: dict[str, int] = {}
+    for canonical_id in registry:
+        prefix = canonical_id.rsplit("-", 1)[0]
+        try:
+            counters[prefix] = max(counters.get(prefix, 0), int(canonical_id.rsplit("-", 1)[1]))
+        except (IndexError, ValueError):
+            continue
+    for message in messages:
+        if message.type != "tool":
+            continue
+        result = parse_tool_result(str(message.content))
+        if not result or not result.ok or not result.evidence:
+            continue
+        changed = False
+        evidence = []
+        binding_base = str(getattr(message, "tool_call_id", getattr(message, "id", "tool")))
+        for index, item in enumerate(result.evidence):
+            binding_key = f"{binding_base}:{index}"
+            canonical_id = bindings.get(binding_key)
+            if canonical_id is None:
+                prefix = {
+                    "web": "WEB", "knowledge_base": "KB",
+                    "calculation": "CALC", "attachment": "ATTACH",
+                }.get(item.source_type, "EVIDENCE")
+                candidate = item.evidence_id
+                if candidate in registry:
+                    candidate = ""
+                if not candidate:
+                    counters[prefix] = counters.get(prefix, 0) + 1
+                    candidate = f"{prefix}-{counters[prefix]}"
+                while candidate in registry:
+                    counters[prefix] = counters.get(prefix, 0) + 1
+                    candidate = f"{prefix}-{counters[prefix]}"
+                canonical_id = candidate
+                bindings[binding_key] = canonical_id
+                registry[canonical_id] = asdict(item)
+            if canonical_id != item.evidence_id:
+                changed = True
+            evidence.append(replace(item, evidence_id=canonical_id))
+        if changed:
+            normalized_result = replace(result, evidence=tuple(evidence))
+            normalized.append(ToolMessage(content=normalized_result.to_json(), tool_call_id=binding_base))
+        else:
+            normalized.append(message)
+    return normalized, registry, bindings
 
 
 def _latest_user_query(messages: list[AnyMessage]) -> str:
@@ -94,17 +156,40 @@ def _recent_tool_errors(messages: list[AnyMessage]) -> int:
     return count
 
 
+def _current_run_messages(messages: list[AnyMessage]) -> list[AnyMessage]:
+    """Exclude tool evidence belonging to an earlier turn in a conversation."""
+    start = 0
+    for index, message in enumerate(messages):
+        if message.type == "human" and not str(message.content).startswith("Critic Feedback:"):
+            start = index
+    return messages[start:]
+
+
 def _citation_status(messages: list[AnyMessage], draft: str) -> str:
     evidence_ids: list[str] = []
-    for message in messages:
+    current_messages = _current_run_messages(messages)
+    had_tool_result = False
+    for message in current_messages:
         if message.type != "tool":
             continue
+        had_tool_result = True
         result = parse_tool_result(str(message.content))
-        if result:
+        if result and result.ok:
             evidence_ids.extend(item.evidence_id for item in result.evidence)
     if not evidence_ids:
-        return "not_required"
-    if any(evidence_id in draft for evidence_id in evidence_ids) or "source" in draft.lower():
+        return "missing" if had_tool_result else "not_required"
+    cited = set(re.findall(r"(?<!\w)\[([A-Z][A-Z0-9_-]*-\d+)\](?!\w)", draft))
+    available = set(evidence_ids)
+    if cited - available:
+        return "invalid"
+    raw_urls = extract_citation_urls(draft)
+    normalized_urls = [normalize_citation_url(url) for url in raw_urls]
+    if any(url is None for url in normalized_urls):
+        return "invalid"
+    cited_urls = set(normalized_urls)
+    if cited_urls - set(available_evidence_urls(current_messages)):
+        return "invalid"
+    if cited & available or cited_urls:
         return "present"
     return "missing"
 
@@ -197,6 +282,17 @@ def create_agent_graph(
 
     def executor_node(state: AgentState):
         mode = get_mode(state.get("mode"))
+        normalized_tools, evidence_registry, evidence_bindings = _register_tool_evidence(
+            state["messages"], state.get("evidence_registry"), state.get("evidence_bindings")
+        )
+        normalized_by_call = {
+            str(message.tool_call_id): message for message in normalized_tools
+        }
+        llm_messages = [
+            normalized_by_call.get(str(getattr(message, "tool_call_id", "")), message)
+            if message.type == "tool" else message
+            for message in state["messages"]
+        ]
         sys_msg = SystemMessage(
             content=(
                 "You are the research executor. Follow this plan:\n"
@@ -211,7 +307,7 @@ def create_agent_graph(
         if state.get("context"):
             sys_msg = SystemMessage(content=f"{sys_msg.content}\n\nTemporary task context:\n{state['context']}")
         try:
-            response = llm_with_tools.invoke([sys_msg] + state["messages"])
+            response = llm_with_tools.invoke([sys_msg] + llm_messages)
         except groq.BadRequestError:
             retry_msg = HumanMessage(
                 content=(
@@ -220,7 +316,7 @@ def create_agent_graph(
                 )
             )
             try:
-                response = llm_with_tools.invoke([sys_msg] + state["messages"] + [retry_msg])
+                response = llm_with_tools.invoke([sys_msg] + llm_messages + [retry_msg])
             except Exception as error:
                 return {
                     "run_status": "executor_failed",
@@ -236,7 +332,7 @@ def create_agent_graph(
                 }
             time.sleep(rate_limit_delay)
             try:
-                response = llm_with_tools.invoke([sys_msg] + state["messages"])
+                response = llm_with_tools.invoke([sys_msg] + llm_messages)
             except Exception as retry_error:
                 return {
                     "run_status": "executor_failed",
@@ -244,8 +340,10 @@ def create_agent_graph(
                     "trace": [_trace("executor", "failed")],
                 }
         return {
-            "messages": [response],
+            "messages": normalized_tools + [response],
             "run_status": "executing",
+            "evidence_registry": evidence_registry,
+            "evidence_bindings": evidence_bindings,
             "trace": [_trace("executor", "tool_requested" if response.tool_calls else "drafted")],
         }
 
@@ -312,8 +410,9 @@ def create_agent_graph(
                 f"Plan: {state.get('plan', '')}\n"
                 f"Draft: {draft}\n"
                 f"Citation status: {citation_status}\n"
-                "Reply APPROVED only if the draft is complete and evidence-supported. "
-                "Otherwise provide one brief correction."
+                'Reply only as JSON: {"decision":"approved|revise|rejected","feedback":"..."}. '
+                "Approve only if complete and evidence-supported; reject if it cannot be "
+                "safely verified."
             )
         )
         try:
@@ -322,7 +421,8 @@ def create_agent_graph(
                     SystemMessage(
                         content=(
                             "You are a strict research reviewer. Check correctness, "
-                            "completeness, and support for important claims."
+                            "completeness, and support for important claims. "
+                            "Return valid JSON matching the requested schema."
                         )
                     ),
                     prompt,
@@ -335,33 +435,51 @@ def create_agent_graph(
                     response = llm.invoke([prompt])
                 except Exception:
                     return {
-                        "run_status": "critic_unavailable",
+                        "run_status": "critic_failed",
                         "critic_status": "unavailable",
                         "citation_status": citation_status,
                         "trace": [_trace("critic", "unavailable")],
                     }
             else:
                 return {
-                    "run_status": "critic_unavailable",
+                    "run_status": "critic_failed",
                     "critic_status": "unavailable",
                     "citation_status": citation_status,
                     "trace": [_trace("critic", "unavailable")],
                 }
 
-        review = str(response.content).strip()
-        if "APPROVED" in review.upper() or state.get("revision_count", 0) >= 1:
+        decision = parse_critic_decision(str(response.content))
+        if decision is None:
             return {
-                "run_status": (
-                    "completed_after_revision"
-                    if state.get("revision_count", 0)
-                    else "completed"
-                ),
+                "run_status": "critic_failed",
+                "critic_status": "unavailable",
+                "citation_status": citation_status,
+                "trace": [_trace("critic", "invalid_decision")],
+            }
+        if decision.decision == "approved" and citation_status not in {"invalid", "missing"}:
+            return {
+                "run_status": "completed_after_revision" if state.get("revision_count", 0) else "completed",
                 "critic_status": "approved",
                 "citation_status": citation_status,
                 "trace": [_trace("critic", "approved")],
             }
+        if decision.decision == "rejected":
+            return {
+                "run_status": "critic_rejected",
+                "critic_status": "rejected",
+                "citation_status": citation_status,
+                "trace": [_trace("critic", "rejected")],
+            }
+        if state.get("revision_count", 0) >= 1:
+            return {
+                "run_status": "critic_failed",
+                "critic_status": "revision_limit",
+                "citation_status": citation_status,
+                "trace": [_trace("critic", "revision_limit")],
+            }
+        feedback = decision.feedback or "Correct the draft and cite only current-run evidence IDs."
         return {
-            "messages": [HumanMessage(content=f"Critic Feedback: {review}")],
+            "messages": [HumanMessage(content=f"Critic Feedback: {feedback}")],
             "revision_count": state.get("revision_count", 0) + 1,
             "critic_status": "revision_requested",
             "citation_status": citation_status,
@@ -369,8 +487,10 @@ def create_agent_graph(
         }
 
     def should_loop_critic(state: AgentState) -> Literal["executor", END]:
-        if state["messages"][-1].type == "human" and "Critic Feedback:" in str(
-            state["messages"][-1].content
+        if (
+            state.get("critic_status") == "revision_requested"
+            and state["messages"][-1].type == "human"
+            and "Critic Feedback:" in str(state["messages"][-1].content)
         ):
             return "executor"
         return END

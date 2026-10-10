@@ -23,6 +23,9 @@ The agent accepts a natural-language question, creates a short plan, uses the ap
 - Per-node execution progress and downloadable Markdown reports.
 - A low-latency fast path for short conversational questions that do not require research,
   using one model call and skipping planning, tools, and critic review.
+- Strict JSON critic decisions (`approved`, `revise`, or `rejected`); malformed or unavailable
+  critic responses fail closed and are never presented as verified answers.
+- Tavily, Qdrant, and Python all emit the same `ToolResult` envelope with citeable evidence.
 
 ## Architecture
 
@@ -43,6 +46,11 @@ flowchart LR
 ```
 
 The executor is configured with `qwen/qwen3.8-27b` through `langchain-groq`. Tool execution is capped at four tool-result rounds, and consecutive tool errors are capped at two. The critic can send the draft back to the executor for one revision.
+
+Critic approval requires a valid JSON decision and citations that match evidence produced in
+the current run. Evidence from earlier follow-up turns is not eligible, and fabricated or
+ambiguous citation text is rejected. If the critic is unavailable, malformed, or rejects the
+draft, the terminal status is non-completed (`critic_failed` or `critic_rejected`).
 
 ## Repository layout
 

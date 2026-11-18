@@ -226,8 +226,10 @@ def evaluate_state(state: dict[str, Any], case: EvaluationCase) -> dict[str, Any
 
 
 def claim_support_labels(answer: str, cited: Iterable[str], available: set[str]) -> list[str]:
-    """Classify citation-bearing claims without pretending to judge factual prose."""
-    cited_set = set(cited)
+    """Classify citation-bearing claims without pretending to judge factual prose.
+
+    ``cited`` is accepted for API compatibility; labels are derived per sentence.
+    """
     labels: list[str] = []
     for sentence in re.split(r"(?<=[.!?])\s+", answer or ""):
         if not sentence.strip():

@@ -1,23 +1,46 @@
 # ResearchPilot Agent
 
-ResearchPilot is a self-correcting research assistant built with **LangGraph**, **Groq**, **Tavily**, **Qdrant**, **Gemini embeddings**, and **Streamlit**.
+[![CI](https://github.com/Iitian-shivansh/ResearchPilot-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Iitian-shivansh/ResearchPilot-Agent/actions/workflows/ci.yml)
+
+**A tool-using research agent built to be tested: a fail-closed reviewer, a sandboxed code tool with exploit regression tests, and a reproducible evaluation harness.**
 
 🌟 **Live demo:** [researchpilot-agent-ask-query.streamlit.app](https://researchpilot-agent-ask-query.streamlit.app/)
 
-The agent accepts a natural-language question, creates a short plan, uses the appropriate tools, drafts an answer, and reviews its own result. It can combine web search, retrieval from a Qdrant knowledge base, and isolated Python calculations.
+ResearchPilot answers a question by planning, calling tools (Tavily web search, a Qdrant knowledge base, and sandboxed Python), and drafting an answer that cites the evidence it collected. A critic then has to approve it. Answers that cannot be verified are never shown as verified. Built with **LangGraph**, **Groq**, **Tavily**, **Qdrant**, **Gemini embeddings**, and **Streamlit**.
 
-## What is implemented
+## What this project demonstrates
 
-- Plan-and-execute agent graph with a planner, executor, tools node, and critic.
+- **Fail-closed verification.** The critic must return a strict JSON approval, and every citation must
+  match evidence produced in the current run. A malformed, unavailable, or rejecting review ends the
+  run with a non-completed status; the draft is not presented as an answer.
+- **An adversarially tested sandbox.** LLM-generated Python runs in a separate, restricted process:
+  AST validation, an import allowlist, restricted builtins, an environment-variable allowlist,
+  time and output limits, and CPU/memory limits on Linux. Two security audits are logged in
+  [`docs/SECURITY.md`](docs/SECURITY.md) with each finding, its fix, and a regression test that
+  fails on the pre-fix code (for example, a `str.format` attribute-traversal bypass).
+- **Reproducible evaluation.** A versioned 50-case benchmark ([`benchmark/`](benchmark/)) runs
+  offline and deterministically. CI regenerates [`EVALUATION.md`](EVALUATION.md) and fails if it
+  differs from the committed copy. An opt-in live mode runs the same cases against the real agent.
+  The offline fixtures check graph and evidence contracts, not model quality, and the report says so.
+- **Tested without API keys.** 190+ offline tests use injected fake LLMs, tools, embeddings, and
+  Qdrant clients, including Streamlit `AppTest` smoke tests. CI runs them on Python 3.11 and 3.12,
+  alongside ruff.
+- **Untrusted input handling.** Attachments and tool outputs are passed to the model as clearly
+  delimited, size-bounded, untrusted reference material, and are never written to the shared
+  knowledge base.
+
+## Features
+
+- Plan-and-execute agent graph with a planner, executor, tools node, forced-synthesis step, and critic.
 - Tavily web search for current or general-purpose research.
 - Qdrant vector retrieval for domain-specific documents.
 - Gemini embeddings for knowledge-base queries.
 - Sandboxed Python execution in a separate subprocess.
-- Streamlit UI with expandable planner, tool-call, tool-output, draft, and critic traces.
+- Streamlit UI with per-node progress, verified-only answers, and a safe reason when a run fails.
 - CLI entry point for running the agent without Streamlit.
-- One critic-driven revision cycle and safeguards against unbounded tool loops.
+- One critic-driven revision cycle and per-mode tool budgets against unbounded tool loops.
 - Explicit run, critic, and citation statuses so failed verification is not shown as approval.
-- Structured tool-result envelopes with evidence identifiers for knowledge-base and calculation outputs.
+- Structured tool-result envelopes with evidence identifiers for web, knowledge-base, and calculation outputs.
 - Task-scoped `.txt` and `.md` attachments with bounded size/count validation; attachments are temporary prompt context and are never inserted into shared Qdrant.
 - Follow-up conversation state in Streamlit, with Quick, Deep, Compare, and Analyze research modes.
 - Per-node execution progress and downloadable Markdown reports.

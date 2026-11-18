@@ -4,21 +4,24 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 
 from dotenv import load_dotenv
 
-from src.ingestion import IngestionConfig, create_clients, ingest_directory
+from src.ingestion import DEFAULT_COLLECTION_NAME, IngestionConfig, create_clients, ingest_directory
 
 
 def main() -> int:
+    load_dotenv()
     parser = argparse.ArgumentParser(
         description="Ingest .txt, .md, and text-based PDF files into the ResearchPilot Qdrant collection."
     )
     parser.add_argument("input_path", help="A document file or directory to ingest")
     parser.add_argument(
         "--collection",
-        default="documents",
-        help="Qdrant collection name (default: documents)",
+        default=os.getenv("KB_COLLECTION", "").strip() or DEFAULT_COLLECTION_NAME,
+        help="Qdrant collection name (default: $KB_COLLECTION or 'documents'; "
+        "the agent queries $KB_COLLECTION, so keep them in sync)",
     )
     parser.add_argument(
         "--chunk-size",
@@ -41,7 +44,6 @@ def main() -> int:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    load_dotenv()
 
     try:
         client, embeddings = create_clients()

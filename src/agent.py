@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import time
 import operator
 import re
+import time
 from dataclasses import asdict, replace
-from src.evaluation import available_evidence_urls, extract_citation_urls, normalize_citation_url
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 import groq
@@ -17,6 +16,12 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from src.contracts import parse_critic_decision, parse_tool_result
+from src.evaluation import (
+    available_evidence_urls,
+    current_run_messages as _current_run_messages,
+    extract_citation_urls,
+    normalize_citation_url,
+)
 from src.modes import get_mode
 
 MAX_TOOL_ROUNDS = 4
@@ -102,7 +107,16 @@ def _register_tool_evidence(
             evidence.append(replace(item, evidence_id=canonical_id))
         if changed:
             normalized_result = replace(result, evidence=tuple(evidence))
-            normalized.append(ToolMessage(content=normalized_result.to_json(), tool_call_id=binding_base))
+            # Reuse the original message id so the add_messages reducer replaces
+            # the stored ToolMessage in place instead of appending a duplicate.
+            normalized.append(
+                ToolMessage(
+                    content=normalized_result.to_json(),
+                    tool_call_id=binding_base,
+                    name=getattr(message, "name", None),
+                    id=getattr(message, "id", None),
+                )
+            )
         else:
             normalized.append(message)
     return normalized, registry, bindings
@@ -131,12 +145,42 @@ def is_fast_query(query: str) -> bool:
 
 
 def _is_rate_limit(error: Exception) -> bool:
+    if isinstance(error, groq.RateLimitError) or getattr(error, "status_code", None) == 429:
+        return True
     text = str(error).lower()
-    return "429" in text or "rate" in text
+    return "429" in text or "rate limit" in text or "too many requests" in text
+
+
+def describe_api_error(error: Exception) -> str:
+    """Return a safe, actionable category for a provider error (never the raw message)."""
+
+    if isinstance(error, groq.AuthenticationError):
+        return "Authentication failed. Check GROQ_API_KEY."
+    if _is_rate_limit(error):
+        return "Rate limit reached. Wait and retry, or check the provider quota."
+    if isinstance(error, groq.NotFoundError):
+        return "The configured model is unavailable. Check the model name and provider access."
+    if isinstance(error, groq.BadRequestError):
+        return "The provider rejected the request. Try a shorter question."
+    if isinstance(error, (groq.APIConnectionError, groq.APITimeoutError)):
+        return "Could not reach the model provider. Check network connectivity."
+    return f"Provider request failed ({type(error).__name__})."
 
 
 def _tool_rounds(messages: list[AnyMessage]) -> int:
-    return sum(1 for message in messages if message.type == "tool")
+    """Count distinct tool executions in the current run (not duplicate messages)."""
+
+    call_ids = set()
+    anonymous = 0
+    for message in _current_run_messages(messages):
+        if message.type != "tool":
+            continue
+        call_id = getattr(message, "tool_call_id", None)
+        if call_id:
+            call_ids.add(str(call_id))
+        else:
+            anonymous += 1
+    return len(call_ids) + anonymous
 
 
 def _recent_tool_errors(messages: list[AnyMessage]) -> int:
@@ -154,15 +198,6 @@ def _recent_tool_errors(messages: list[AnyMessage]) -> int:
             break
         count += 1
     return count
-
-
-def _current_run_messages(messages: list[AnyMessage]) -> list[AnyMessage]:
-    """Exclude tool evidence belonging to an earlier turn in a conversation."""
-    start = 0
-    for index, message in enumerate(messages):
-        if message.type == "human" and not str(message.content).startswith("Critic Feedback:"):
-            start = index
-    return messages[start:]
 
 
 def _citation_status(messages: list[AnyMessage], draft: str) -> str:
@@ -229,7 +264,9 @@ def create_agent_graph(
             if not _is_rate_limit(error):
                 return {
                     "run_status": "planner_failed",
-                    "messages": [AIMessage(content="The research plan could not be created.")],
+                    "messages": [
+                        AIMessage(content=f"The research plan could not be created: {describe_api_error(error)}")
+                    ],
                     "trace": [_trace("planner", "failed")],
                 }
 
@@ -240,7 +277,7 @@ def create_agent_graph(
                 return {
                     "run_status": "planner_failed",
                     "messages": [
-                        AIMessage(content=f"Planning failed after retry: {type(retry_error).__name__}")
+                        AIMessage(content=f"Planning failed after retry: {describe_api_error(retry_error)}")
                     ],
                     "trace": [_trace("planner", "failed")],
                 }
@@ -269,7 +306,7 @@ def create_agent_graph(
         except Exception as error:
             return {
                 "run_status": "fast_path_failed",
-                "messages": [AIMessage(content=f"Fast answer failed: {type(error).__name__}")],
+                "messages": [AIMessage(content=f"Fast answer failed: {describe_api_error(error)}")],
                 "trace": [_trace("fast_answer", "failed")],
             }
         return {
@@ -320,14 +357,14 @@ def create_agent_graph(
             except Exception as error:
                 return {
                     "run_status": "executor_failed",
-                    "messages": [AIMessage(content=f"Tool-call formatting failed: {type(error).__name__}")],
+                    "messages": [AIMessage(content=f"Tool-call formatting failed: {describe_api_error(error)}")],
                     "trace": [_trace("executor", "failed")],
                 }
         except Exception as error:
             if not _is_rate_limit(error):
                 return {
                     "run_status": "executor_failed",
-                    "messages": [AIMessage(content=f"Executor failed: {type(error).__name__}")],
+                    "messages": [AIMessage(content=f"Executor failed: {describe_api_error(error)}")],
                     "trace": [_trace("executor", "failed")],
                 }
             time.sleep(rate_limit_delay)
@@ -336,7 +373,7 @@ def create_agent_graph(
             except Exception as retry_error:
                 return {
                     "run_status": "executor_failed",
-                    "messages": [AIMessage(content=f"Executor retry failed: {type(retry_error).__name__}")],
+                    "messages": [AIMessage(content=f"Executor retry failed: {describe_api_error(retry_error)}")],
                     "trace": [_trace("executor", "failed")],
                 }
         return {
@@ -361,7 +398,9 @@ def create_agent_graph(
         except Exception as error:
             return {
                 "run_status": "synthesis_failed",
-                "messages": [AIMessage(content="The agent could not synthesize a final answer.")],
+                "messages": [
+                    AIMessage(content=f"The agent could not synthesize a final answer: {describe_api_error(error)}")
+                ],
                 "trace": [_trace("synthesis", "failed")],
             }
         return {
@@ -415,24 +454,24 @@ def create_agent_graph(
                 "safely verified."
             )
         )
+        critic_messages = [
+            SystemMessage(
+                content=(
+                    "You are a strict research reviewer. Check correctness, "
+                    "completeness, and support for important claims. "
+                    "Return valid JSON matching the requested schema."
+                )
+            ),
+            prompt,
+        ]
         try:
-            response = llm.invoke(
-                [
-                    SystemMessage(
-                        content=(
-                            "You are a strict research reviewer. Check correctness, "
-                            "completeness, and support for important claims. "
-                            "Return valid JSON matching the requested schema."
-                        )
-                    ),
-                    prompt,
-                ]
-            )
+            response = llm.invoke(critic_messages)
         except Exception as error:
             if _is_rate_limit(error):
                 time.sleep(rate_limit_delay)
                 try:
-                    response = llm.invoke([prompt])
+                    # Retry with the same reviewer instructions, not the bare prompt.
+                    response = llm.invoke(critic_messages)
                 except Exception:
                     return {
                         "run_status": "critic_failed",

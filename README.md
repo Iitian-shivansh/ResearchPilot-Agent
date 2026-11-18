@@ -45,7 +45,7 @@ flowchart LR
     C -->|Approved| A[Final answer]
 ```
 
-The executor is configured with `qwen/qwen3.8-27b` through `langchain-groq`. Tool execution is capped at four tool-result rounds, and consecutive tool errors are capped at two. The critic can send the draft back to the executor for one revision.
+The executor is configured with `qwen/qwen3.8-27b` through `langchain-groq`. Tool execution is capped per research mode (Quick: 2, Analyze: 3, Deep and Compare: 4 distinct tool executions), and consecutive tool errors are capped at two. When a cap is reached, a dedicated synthesis step writes the answer from the evidence gathered so far. The critic can send the draft back to the executor for one revision.
 
 Critic approval requires a valid JSON decision and citations that match evidence produced in
 the current run. Evidence from earlier follow-up turns is not eligible, and fabricated or
@@ -66,12 +66,13 @@ draft, the terminal status is non-completed (`critic_failed` or `critic_rejected
 | `src/attachments.py` | Bounded validation and formatting of temporary task attachments |
 | `src/modes.py` | Research mode instructions and tool-budget defaults |
 | `src/report.py` | Markdown report export |
-| `tests/test_sandbox.py` | Sandbox and security tests |
-| `tests/test_agent.py` | Mocked planner, executor, synthesis, and critic graph tests |
-| `tests/test_contracts.py` | Tool-result and evidence contract tests |
-| `test_connections.py` | Optional Qdrant and Gemini connectivity checks |
-| `test_models.py` | Optional Groq model-list diagnostic |
-| `evaluate.py` | Runs the sample evaluation questions and rewrites `EVALUATION.md` |
+| `src/ingestion.py` / `ingest.py` | Knowledge-base ingestion library and CLI |
+| `src/evaluation.py` / `evaluate.py` | Evaluation metrics and the benchmark runner (offline by default) |
+| `benchmark/` | Versioned 50-case benchmark and regression thresholds |
+| `tests/` | Offline unit and regression tests (no API keys or network needed) |
+| `scripts/check_connections.py` | Optional live Qdrant and Gemini connectivity check |
+| `scripts/check_models.py` | Optional live Groq model-list diagnostic |
+| `.github/workflows/ci.yml` | CI: tests, offline benchmark, report reproducibility, lint |
 | `docs/SECURITY.md` | Threat model, controls, limitations, and security audit history |
 | `demo_traces/` | Example plan/execute/self-correction trace |
 
@@ -79,7 +80,7 @@ draft, the terminal status is non-completed (`critic_failed` or `critic_rejected
 
 - Python 3.10 or newer
 - API keys for Groq, Tavily, and Google Gemini
-- A Qdrant Cloud collection named `documents` for knowledge-base retrieval
+- A Qdrant Cloud collection for knowledge-base retrieval (`documents` by default; set `KB_COLLECTION` to change it for both the agent and `ingest.py`)
 - Windows, macOS, and Linux are supported; the strongest OS-level resource limits are available on Linux
 
 ## Installation
@@ -173,7 +174,7 @@ On Windows, `start.bat` creates no environment by itself; it expects an existing
 start.bat
 ```
 
-The UI displays the plan, tool calls, tool outputs, draft answer, critic result, and final answer. A query can take a minute on free-tier LLM limits.
+The UI shows per-node progress (planner, executor, tools, synthesis, critic) and the final answer only when it is verified. When a run does not produce a verified answer, the UI shows the terminal status and a safe reason (for example, an authentication or rate-limit problem, or a critic rejection). A query can take a minute on free-tier LLM limits.
 
 The Streamlit UI supports follow-up questions in the same browser session. Choose a research
 mode (Quick, Deep, Compare, or Analyze) in the sidebar. Attach up to five UTF-8 `.txt` or
@@ -192,9 +193,10 @@ With the virtual environment active:
 
 ```bash
 python -m src.main "What is the capital of France?"
+python -m src.main --mode Quick "Compare two vector databases"
 ```
 
-If no question is provided, the CLI prompts interactively. The CLI requires `GROQ_API_KEY`, `TAVILY_API_KEY`, and `GEMINI_API_KEY` to be present, even when a particular question does not use every integration.
+If no question is provided, the CLI prompts interactively. The CLI prints the trace, the final status, and exits with `0` only for a verified answer. The CLI requires `GROQ_API_KEY`, `TAVILY_API_KEY`, and `GEMINI_API_KEY` to be present, even when a particular question does not use every integration.
 
 ## Tests and evaluation
 
@@ -215,64 +217,60 @@ claim-support labels, unsupported-claim counts, recovery, and latency/usage/cost
 availability, plus aggregate regression thresholds from
 `benchmark/thresholds.json`. Live evaluation is never implicit; `python
 evaluate.py --live` requires all production configuration and runs selected cases
-against the configured agent. Use `--limit N` and repeatable `--category NAME`
-to control consumption.
+against the configured agent, using each case's research mode. Use `--limit N` and
+repeatable `--category NAME` to control consumption.
 
-The sandbox tests do not require API keys or external services:
+Only a full offline run rewrites the tracked `EVALUATION.md` and
+`evaluation-results.json`; a `--category` subset or `--no-write` run only prints results.
+CI regenerates both files and fails if they differ from the committed versions, so the
+published numbers are always reproducible.
 
-```bash
-python -m unittest tests.test_sandbox -v
-```
+### Unit and regression tests
 
-The agent graph also has deterministic tests with injected fake LLMs and tools:
-
-```bash
-python -m unittest tests.test_agent -v
-```
-
-The ingestion tests use fake embedding and Qdrant clients and do not require API keys:
+All tests are offline: they use injected fake LLMs, tools, embeddings, and Qdrant clients, and
+need no API keys or network access.
 
 ```bash
-python -m unittest tests.test_ingestion -v
+python -m unittest discover -s tests -t . -v
+# or, if pytest is installed (configured in pyproject.toml to collect tests/ only):
+python -m pytest
 ```
 
-Retrieval configuration and evidence formatting are covered by mocked tests:
+Run a single area with, for example, `python -m unittest tests.test_sandbox -v`.
 
-```bash
-python -m unittest tests.test_tools -v
-```
+### Live evaluation (optional)
 
-If `pytest` is installed, the equivalent command is:
-
-```bash
-python -m pytest tests/test_sandbox.py -v
-```
-
-Run the optional live evaluation only after configuring all services:
+Run the live evaluation only after configuring all services:
 
 ```bash
 python evaluate.py --live --limit 3
+python evaluate.py --live --limit 10 --thresholds benchmark/thresholds.json
 ```
 
-The live evaluation makes multiple LLM/tool calls, sleeps between questions to reduce
-rate-limit pressure, and rewrites `EVALUATION.md`. For deterministic CI/local checks that
-require no API keys or network access, run:
+The live evaluation makes multiple real LLM/tool calls and writes
+`evaluation-results-live.json` (gitignored). It exits non-zero if any case errors, and, when
+`--thresholds` is given, if any threshold is missed; without `--thresholds` it reports metrics
+but does not claim a regression gate.
+
+The offline evaluator validates graph status and structured evidence integrity and exits
+non-zero for contract violations. Its synthetic cases are intentionally not a measure of model
+quality; use the live evaluation and human review for that.
+
+### Diagnostics (live network)
 
 ```bash
-python evaluate.py --category web-search
+python scripts/check_connections.py   # Qdrant + Gemini
+python scripts/check_models.py        # Groq models available to your key
 ```
-
-The offline evaluator validates graph status and structured evidence integrity, writes a
-reviewable `EVALUATION.md`, and exits non-zero for contract violations. Its synthetic cases
-are intentionally not a measure of model quality; use the live evaluation and human review
-for that.
 
 ## Sandbox security
 
 Generated Python is not executed inside the Streamlit process. Before launching the worker, the parent process applies:
 
-- AST validation for dangerous names, dunder attributes, and non-approved imports.
-- A defense-in-depth string blocklist.
+- AST validation for dangerous names, dunder attributes, non-approved imports, and
+  runtime-built format strings (`str.format` field lookups can otherwise reach dunder attributes).
+- A defense-in-depth string blocklist applied to code only; string literals and comments are
+  treated as data, so retrieved text that mentions words like "requests" is not rejected.
 - Code-size, output-size, and wall-clock limits.
 - A minimal environment-variable allowlist.
 
@@ -283,7 +281,8 @@ This is a subprocess-based defense-in-depth sandbox, not a hardened container or
 ## Phase one reliability work
 
 The agent graph now separates execution outcomes such as `completed`, `completed_after_revision`,
-`critic_unavailable`, `planner_failed`, `executor_failed`, and `synthesis_failed`. If the tool
+`fast_completed`, `critic_failed`, `critic_rejected`, `planner_failed`, `executor_failed`,
+`synthesis_failed`, and `fast_path_failed`. If the tool
 budget is exhausted, the graph runs a dedicated synthesis step instead of terminating on a tool
 call. Tool outputs use a stable JSON envelope and may include evidence IDs such as `[KB-1]` or
 `[CALC-1]`, which the critic checks before approval.
@@ -298,7 +297,7 @@ Gemini, and Qdrant.
 - Tool-call formatting errors from the LLM are retried once with simplified instructions.
 - Knowledge-base retrieval depends on Qdrant and Gemini credentials.
 - PDF ingestion extracts text but does not perform OCR; image-only PDFs are unsupported.
-- Streamlit browser-level integration tests are not yet included; attachment validation and report generation have deterministic unit coverage.
+- Streamlit coverage uses `streamlit.testing` AppTest smoke tests with a fake agent graph (`tests/test_app.py`); real-browser end-to-end tests are not yet included.
 - Windows does not receive the Linux-only CPU and memory limits.
 - Citation checking in `evaluate.py` is heuristic rather than a formal correctness metric.
 
@@ -306,11 +305,9 @@ Gemini, and Qdrant.
 
 The core agent, UI, integrations, sandbox, documentation, ingestion pipeline, structured evidence contracts, and mocked agent test suite are implemented. The most useful next improvements are:
 
-1. Add Streamlit smoke/integration coverage.
-2. Improve citation extraction and evaluation beyond heuristics.
-3. Add Streamlit smoke/integration coverage.
-4. Improve citation extraction and evaluation beyond heuristics.
-5. Consider container-based execution for stronger isolation in production.
+1. Improve citation extraction and evaluation beyond heuristics.
+2. Run the offline benchmark through the real graph with recorded model responses.
+3. Consider container-based execution for stronger isolation in production.
 
 ## License
 

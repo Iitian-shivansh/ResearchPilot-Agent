@@ -1,0 +1,16 @@
+# Tool configuration only. Runtime dependencies live in requirements.txt
+# (the Streamlit Community Cloud deployment installs from that file).
+
+[tool.pytest.ini_options]
+# Only collect the offline test suite; scripts/ contains live-network diagnostics.
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["venv", ".archify"]
+
+[tool.ruff.lint]
+# Start with correctness rules (pyflakes + syntax errors); widen once the baseline is clean.
+select = ["E9", "F"]

@@ -34,8 +34,28 @@ submission = st.chat_input(
 )
 
 
+VERIFIED_STATUSES = {"completed", "completed_after_revision", "fast_completed"}
+CRITIC_FAILURE_REASONS = {
+    "unavailable": "Automated review was unavailable or returned an invalid decision.",
+    "rejected": "The reviewer rejected the draft because it could not be verified.",
+    "revision_limit": "The draft still did not pass review after one revision.",
+}
+
+
 def _submission_text(value) -> str:
     return str(getattr(value, "text", "") or "").strip()
+
+
+@st.cache_resource(show_spinner=False)
+def _get_graph():
+    """Build the agent graph once per server process instead of on every submit."""
+    return create_agent_graph()
+
+
+def _failure_reason(critic_status: str, failure_detail: str) -> str:
+    if failure_detail:
+        return failure_detail
+    return CRITIC_FAILURE_REASONS.get(critic_status, "No further detail was reported.")
 
 
 if submission:
@@ -58,7 +78,7 @@ if submission:
             st.caption("Task context: " + ", ".join(item.name for item in attachments))
 
     try:
-        graph = create_agent_graph()
+        graph = _get_graph()
     except Exception as error:
         st.error(f"Failed to initialize the agent: {error}")
         st.stop()
@@ -70,6 +90,7 @@ if submission:
 
     trace = []
     final_answer = ""
+    failure_detail = ""
     run_status = "running"
     critic_status = "pending"
     with st.chat_message("assistant"):
@@ -90,7 +111,11 @@ if submission:
                     trace.extend(update.get("trace", []))
                     status.write(f"{node_name}: {run_status}")
 
-                    if node_name in {"fast_answer", "executor", "synthesis"}:
+                    if str(update.get("run_status", "")).endswith("_failed"):
+                        for message in update.get("messages", []):
+                            if isinstance(message, AIMessage) and message.content:
+                                failure_detail = str(message.content)
+                    elif node_name in {"fast_answer", "executor", "synthesis"}:
                         for message in update.get("messages", []):
                             if isinstance(message, AIMessage) and not message.tool_calls and message.content:
                                 final_answer = str(message.content)
@@ -104,22 +129,22 @@ if submission:
             st.error(f"Research run failed: {error}")
             st.stop()
 
-        verified = run_status in {"completed", "completed_after_revision", "fast_completed"}
-        if final_answer and verified:
-            st.markdown(final_answer)
-        if not verified:
+        error_message = ""
+        if run_status not in VERIFIED_STATUSES or not final_answer:
             final_answer = ""
-            st.error(f"Research ended without a verified answer: `{run_status}`")
-        elif critic_status == "unavailable":
-            st.warning("Automated review was unavailable; treat this answer as unverified.")
-        elif run_status in {"planner_failed", "executor_failed", "synthesis_failed"}:
-            st.error(f"Research ended with status: `{run_status}`")
+            error_message = (
+                f"Research ended without a verified answer (`{run_status}`). "
+                f"{_failure_reason(critic_status, failure_detail)}"
+            )
 
     if final_answer:
         st.session_state.conversation.append({"role": "assistant", "content": final_answer})
+    # Persist the outcome: st.rerun() below discards anything rendered during this run,
+    # so the error must be re-rendered from session state or the user never sees it.
     st.session_state.last_result = {
         "query": query,
         "answer": final_answer,
+        "error": error_message,
         "mode": mode,
         "trace": trace,
         "attachments": [item.name for item in attachments],
@@ -128,6 +153,8 @@ if submission:
 
 if st.session_state.last_result:
     result = st.session_state.last_result
+    if result.get("error"):
+        st.error(result["error"])
     report = build_markdown_report(
         result["query"],
         result["answer"],

@@ -1,5 +1,9 @@
+"""Optional diagnostic: check Qdrant and Gemini connectivity (live network calls).
+
+Run manually: python scripts/check_connections.py
+"""
+
 import os
-import sys
 from dotenv import load_dotenv
 
 # Load environment variables

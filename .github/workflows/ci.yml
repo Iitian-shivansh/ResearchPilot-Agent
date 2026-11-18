@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests and offline evaluation (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Import smoke test
+        run: python -c "import langchain_tavily, pypdf, src.agent, src.tools, src.ingestion, evaluate"
+
+      - name: Unit tests (offline, no API keys)
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: Offline benchmark (deterministic, no network)
+        run: python evaluate.py
+
+      - name: Committed evaluation reports are reproducible
+        run: git diff --exit-code -- EVALUATION.md evaluation-results.json
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install "ruff==0.8.4"
+      # GitHub output format turns each finding into an inline PR annotation.
+      - run: ruff check . --output-format=github

@@ -136,6 +136,16 @@ Additional OS-level limits (Linux only, set in worker):
 
 ## Security Audit Log
 
+### Audit: 2026-11-18
+
+Repository audit of the sandbox and agent tool path. Each finding was reproduced with a probe
+before the fix and is covered by a regression test in `tests/test_sandbox_regressions.py`.
+
+| # | Finding | Severity | Status |
+|---|---------|----------|--------|
+| 1 | Format-string attribute traversal: `str.format` resolves `{0.attr}` fields with `getattr`, so a format string built at runtime (`"{0._" + "_class_" + "_}"`) reached dunder attributes without an `ast.Attribute` node or a blocklisted substring. Reproduced: printed `int`. Impact limited to reading attribute reprs (no calls). | Low-Medium | **Fixed**: `.format`/`.format_map` allowed only on literal strings without `__`; `vformat`/`get_field` blocked |
+| 2 | Blocklist false positives: substring matching over the whole source rejected harmless string data (retrieved text containing "requests", "signal", "reopen(") even though the tool tells the model to embed retrieved text as literals. | Medium (reliability) | **Fixed**: blocklist ignores string-literal and comment text; code in f-string replacement fields is still scanned (3.12+), and the AST check remains primary |
+
 ### Audit: 2026-09-19
 
 Adversarial security review of the sandbox implementation.

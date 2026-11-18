@@ -60,7 +60,13 @@ def _fixture(case):
     }
 
 
-def run_offline_evaluation(selected_cases=None) -> int:
+def run_offline_evaluation(selected_cases=None, write_outputs: bool = True) -> int:
+    """Run the deterministic benchmark.
+
+    Tracked report files are only rewritten for a full-benchmark run, so a
+    filtered run (``--category``) or ``--no-write`` never leaves partial
+    results in ``EVALUATION.md`` / ``evaluation-results.json``.
+    """
     cases = load_benchmark(BENCHMARK)
     if selected_cases:
         cases = tuple(case for case in cases if case.category in selected_cases)
@@ -87,7 +93,9 @@ def run_offline_evaluation(selected_cases=None) -> int:
                   "Live latency, usage, and provider cost are not measured offline.",
               ],
               "summary": summary, "results": results}
-    (ROOT / "evaluation-results.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    write_outputs = write_outputs and not selected_cases
+    if write_outputs:
+        (ROOT / "evaluation-results.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     markdown = render_evaluation_markdown(results)
     markdown += (
         "\n## Metric definitions\n\n"
@@ -100,7 +108,8 @@ def run_offline_evaluation(selected_cases=None) -> int:
         "Offline fixtures do not measure real-world model accuracy, source quality, or semantic claim entailment.\n\n"
         "## Aggregate metrics\n\n```json\n" + json.dumps(summary, indent=2) + "\n```\n"
     )
-    (ROOT / "EVALUATION.md").write_text(markdown, encoding="utf-8")
+    if write_outputs:
+        (ROOT / "EVALUATION.md").write_text(markdown, encoding="utf-8")
     print(markdown)
     return 0 if summary["regression_passed"] else 1
 
@@ -110,7 +119,12 @@ def _check_live_configuration() -> list[str]:
     return [name for name in required if not os.getenv(name)]
 
 
-def run_live_evaluation(limit=None, categories=None) -> int:
+def run_live_evaluation(limit=None, categories=None, thresholds_path=None) -> int:
+    """Run selected cases against the real agent.
+
+    Exits non-zero if any case errors, or if ``thresholds_path`` is given and a
+    threshold is missed. Without thresholds no regression gate is claimed.
+    """
     missing = _check_live_configuration()
     if missing:
         raise SystemExit("Live mode requires configuration; missing: " + ", ".join(missing))
@@ -125,21 +139,34 @@ def run_live_evaluation(limit=None, categories=None) -> int:
     for case in cases:
         started = time.perf_counter()
         try:
-            state = graph.invoke({"messages": [{"role": "user", "content": case.question}]})
+            state = graph.invoke({
+                "messages": [{"role": "user", "content": case.question}],
+                "mode": case.mode,
+            })
             state["latency_ms"] = round((time.perf_counter() - started) * 1000, 2)
             results.append(evaluate_state(state, case))
         except Exception as error:
             results.append({
                 "case_id": case.case_id, "status": "error", "outcome": "error",
+                "expected_outcome": case.expected_outcome,
                 "passed": False, "task_success": False, "failures": [type(error).__name__],
             })
-    summary = aggregate_results(results)
+    thresholds = (
+        json.loads(Path(thresholds_path).read_text(encoding="utf-8")) if thresholds_path else None
+    )
+    summary = aggregate_results(results, thresholds)
+    summary["regression_gate"] = "applied" if thresholds else "not_applied"
+    errored = [row["case_id"] for row in results if row.get("outcome") == "error"]
     report = {"benchmark": "milestone2_v1", "mode": "live", "external_calls": True,
-              "summary": summary, "results": results,
+              "summary": summary, "results": results, "errored_cases": errored,
               "limitations": ["Live results depend on configured providers and model behavior."]}
     (ROOT / "evaluation-results-live.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
-    return 0 if summary["regression_passed"] else 1
+    if errored:
+        print(f"{len(errored)} case(s) errored: {', '.join(errored)}")
+    if not thresholds:
+        print("No --thresholds file given: metrics are reported but no regression gate was applied.")
+    return 0 if summary["regression_passed"] and not errored else 1
 
 
 if __name__ == "__main__":
@@ -147,9 +174,17 @@ if __name__ == "__main__":
     parser.add_argument("--live", action="store_true", help="Opt in to network-backed evaluation.")
     parser.add_argument("--limit", type=int, default=None, help="Limit selected benchmark cases.")
     parser.add_argument("--category", action="append", help="Restrict cases by category.")
+    parser.add_argument(
+        "--no-write", action="store_true",
+        help="Offline mode: print results without rewriting EVALUATION.md / evaluation-results.json.",
+    )
+    parser.add_argument(
+        "--thresholds", default=None,
+        help="Live mode: JSON thresholds file; when given, missed thresholds fail the run.",
+    )
     args = parser.parse_args()
     selected = set(args.category or [])
     raise SystemExit(
-        run_live_evaluation(args.limit, selected) if args.live
-        else run_offline_evaluation(selected or None)
+        run_live_evaluation(args.limit, selected, args.thresholds) if args.live
+        else run_offline_evaluation(selected or None, write_outputs=not args.no_write)
     )

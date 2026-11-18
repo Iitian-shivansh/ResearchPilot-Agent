@@ -13,7 +13,13 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_KB_LIMIT = 5
 DEFAULT_KB_SCORE_THRESHOLD = 0.0
+DEFAULT_KB_COLLECTION = "documents"
 MAX_KB_RESULT_CHARS = 1200
+
+
+def knowledge_base_collection() -> str:
+    """Collection queried by the agent; must match the one used by ingest.py."""
+    return os.getenv("KB_COLLECTION", "").strip() or DEFAULT_KB_COLLECTION
 
 
 def _normalize_tavily_output(output) -> str:
@@ -86,7 +92,7 @@ def query_knowledge_base(query: str) -> str:
         
         # Search Qdrant
         results = client.query_points(
-            collection_name="documents",
+            collection_name=knowledge_base_collection(),
             query=query_vector,
             limit=_knowledge_base_limit(),
             score_threshold=_knowledge_base_threshold(),

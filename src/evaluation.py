@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import json
-import time
 from pathlib import Path
 from urllib.parse import urlsplit
 from dataclasses import dataclass
@@ -43,7 +42,7 @@ def available_evidence_urls(messages: Iterable[Any], current_run_only: bool = Tr
     """Collect valid source URLs from successful current-run evidence."""
 
     urls: list[str] = []
-    for message in _current_run_messages(messages) if current_run_only else messages:
+    for message in current_run_messages(messages) if current_run_only else messages:
         if getattr(message, "type", None) != "tool":
             continue
         result = parse_tool_result(str(message.content))
@@ -56,7 +55,12 @@ def available_evidence_urls(messages: Iterable[Any], current_run_only: bool = Tr
     return tuple(dict.fromkeys(urls))
 
 
-def _current_run_messages(messages: Iterable[Any]) -> list[Any]:
+def current_run_messages(messages: Iterable[Any]) -> list[Any]:
+    """Return messages from the latest real user turn onward (critic feedback excluded).
+
+    Shared by the agent and the evaluator so both apply the same evidence scope.
+    """
+
     message_list = list(messages)
     starts = [
         index for index, message in enumerate(message_list)
@@ -100,14 +104,7 @@ def available_evidence_ids(messages: Iterable[Any], current_run_only: bool = Tru
     """Collect evidence IDs from successful structured tool messages."""
 
     found: list[str] = []
-    message_list = list(messages)
-    if current_run_only:
-        starts = [
-            index for index, message in enumerate(message_list)
-            if getattr(message, "type", None) == "human"
-            and not str(getattr(message, "content", "")).startswith("Critic Feedback:")
-        ]
-        message_list = message_list[starts[-1]:] if starts else message_list
+    message_list = current_run_messages(messages) if current_run_only else list(messages)
     for message in message_list:
         if getattr(message, "type", None) != "tool":
             continue

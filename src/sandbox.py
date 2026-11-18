@@ -17,6 +17,7 @@ Security guarantees and limitations are documented in docs/SECURITY.md.
 """
 
 import ast
+import io
 import json
 import logging
 import os
@@ -24,7 +25,8 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass, field
+import tokenize
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -151,15 +153,58 @@ _BLOCKED_PATTERNS = [
 ]
 
 
+_LITERAL_TOKEN_TYPES = frozenset(
+    {tokenize.STRING, tokenize.COMMENT}
+    | {
+        getattr(tokenize, name)
+        for name in ("FSTRING_MIDDLE", "TSTRING_MIDDLE")
+        if hasattr(tokenize, name)
+    }
+)
+
+
+def _strip_literals(code: str) -> str:
+    """
+    Blank out string-literal and comment text so that *data* (for example,
+    retrieved web text the agent embeds as a string) is not mistaken for code.
+
+    Code inside f-string replacement fields is kept, because it is executable.
+    If the code cannot be tokenized, it is returned unchanged (fail closed).
+    """
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(code).readline))
+    except (tokenize.TokenError, SyntaxError):
+        return code
+
+    line_offsets = [0]
+    for line in code.splitlines(keepends=True):
+        line_offsets.append(line_offsets[-1] + len(line))
+
+    chars = list(code)
+    for token in tokens:
+        if token.type not in _LITERAL_TOKEN_TYPES:
+            continue
+        start = line_offsets[token.start[0] - 1] + token.start[1]
+        end = line_offsets[token.end[0] - 1] + token.end[1]
+        for index in range(max(0, start), min(len(chars), end)):
+            if chars[index] not in "\r\n":
+                chars[index] = " "
+    return "".join(chars)
+
+
 def _check_blocked_patterns(code: str) -> Optional[str]:
     """
     Check code against the blocklist. Returns the matched pattern if found,
     or None if the code passes.
 
+    String literals and comments are ignored: they are data, and executing
+    their contents would require eval/exec/compile/getattr, which the AST
+    validator rejects.
+
     NOTE: This is best-effort defense-in-depth. String matching can be evaded.
     AST validation is the primary source-level restriction.
     """
-    code_lower = code.lower()
+    code_lower = _strip_literals(code).lower()
     for pattern in _BLOCKED_PATTERNS:
         if pattern.lower() in code_lower:
             return pattern
@@ -191,11 +236,17 @@ _DANGEROUS_NAMES = frozenset([
     "open", "input",
 ])
 
-# Non-dunder attributes that enable dynamic loading
+# Non-dunder attributes that enable dynamic loading or attribute traversal
+# (string.Formatter.vformat/get_field resolve "{0.attr}" fields via getattr).
 _DANGEROUS_ATTRS = frozenset([
     "load_module", "find_module", "find_spec", "module_from_spec",
-    "get_data",
+    "get_data", "vformat", "get_field",
 ])
+
+# str.format / str.format_map resolve "{0.attr}" and "{0[key]}" fields with
+# getattr/getitem, which bypasses the dunder-attribute AST check when the
+# format string is built at runtime (e.g. "{0._" + "_class_" + "_}").
+_FORMAT_METHODS = frozenset(["format", "format_map"])
 MAX_LITERAL_ALLOCATION = 100_000_000
 
 
@@ -263,6 +314,19 @@ def _validate_ast(code: str) -> Optional[str]:
                     f"Access to '{node.attr}' is not allowed "
                     f"in the sandbox (line {getattr(node, 'lineno', '?')})"
                 )
+            if node.attr in _FORMAT_METHODS:
+                receiver = node.value
+                is_literal = isinstance(receiver, ast.Constant) and isinstance(receiver.value, str)
+                if not is_literal:
+                    return (
+                        f"'.{node.attr}()' is only allowed on a literal format string; "
+                        f"use an f-string instead (line {getattr(node, 'lineno', '?')})"
+                    )
+                if "__" in receiver.value:
+                    return (
+                        "Format strings may not reference dunder attributes "
+                        f"(line {getattr(node, 'lineno', '?')})"
+                    )
 
         # 2. Reject dangerous bare names
         if isinstance(node, ast.Name) and node.id in _DANGEROUS_NAMES:
